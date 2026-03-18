@@ -685,8 +685,8 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
     <button class="mcl" onclick="closeSettings()">&#x2715;</button>
     <h2>&#x2699; Oracle Configuration</h2>
     <div class="slabel" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem">
-      <span>Profiles</span>
-      <button class="abtn" style="font-size:.62rem;padding:.25rem .65rem" onclick="newProfile()">+ New</button>
+      <span>Profiles <span id="profileCount" style="font-size:.65rem;color:rgba(201,150,59,.5);font-family:Space Mono,monospace"></span></span>
+      <button class="abtn" style="font-size:.62rem;padding:.25rem .65rem" onclick="newProfile()">+ New Profile</button>
     </div>
     <div id="profileList" style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.8rem;min-height:36px"></div>
     <div class="slabel">Birth Details</div>
@@ -759,12 +759,29 @@ const PROFILE_KEY = 'samarthaa_profiles';
 const ACTIVE_KEY  = 'samarthaa_active_profile';
 
 function loadAllProfiles(){
-  try{ return JSON.parse(localStorage.getItem(PROFILE_KEY)||'[]'); }
-  catch(e){ return []; }
+  try{
+    const raw=localStorage.getItem(PROFILE_KEY);
+    if(!raw) return [];
+    const parsed=JSON.parse(raw);
+    if(!Array.isArray(parsed)) return [];
+    return parsed;
+  }catch(e){
+    console.error('loadAllProfiles error:',e);
+    return [];
+  }
 }
 
 function saveAllProfiles(profiles){
-  localStorage.setItem(PROFILE_KEY, JSON.stringify(profiles));
+  try{
+    const str=JSON.stringify(profiles);
+    console.log('Saving',profiles.length,'profiles,',Math.round(str.length/1024)+'KB');
+    localStorage.setItem(PROFILE_KEY,str);
+    return true;
+  }catch(e){
+    console.error('saveAllProfiles failed:',e.message);
+    toast('Storage error: '+e.message);
+    return false;
+  }
 }
 // ── Save computed chart data back into active profile ────────────────────────
 function saveChartToProfile(){
@@ -773,15 +790,45 @@ function saveChartToProfile(){
   const profiles=loadAllProfiles();
   const idx=profiles.findIndex(p=>p.id===id);
   if(idx<0) return;
-  // Store all computed chart data
-  if(S.chartData)    profiles[idx].chartData    = S.chartData;
-  if(S.dashaData)    profiles[idx].dashaData    = S.dashaData;
-  if(S.ashtakScores) profiles[idx].ashtakScores = S.ashtakScores;
-  if(S.shadData)     profiles[idx].shadData     = S.shadData;
-  profiles[idx].chartSavedAt = new Date().toISOString();
-  saveAllProfiles(profiles);
-  // Update profile chip to show chart is saved
-  renderProfileList();
+
+  // Store lean versions to minimise localStorage size
+  if(S.chartData){
+    // chartData: keep full (needed for all calculations) — ~3-5KB
+    profiles[idx].chartData = S.chartData;
+  }
+  if(S.dashaData){
+    // dashaData: strip startMs/endMs from mahadashas (can recompute) — saves ~40%
+    const leanDasha={...S.dashaData};
+    if(leanDasha.mahadashas){
+      leanDasha.mahadashas=leanDasha.mahadashas.map(m=>({
+        lord:m.lord,start:m.start,end:m.end,years:m.years,
+        isCurrent:m.isCurrent,
+        antardashas:m.antardashas?m.antardashas.map(a=>({
+          lord:a.lord,start:a.start,end:a.end,years:a.years,isCurrent:a.isCurrent
+        })):[]
+      }));
+    }
+    profiles[idx].dashaData=leanDasha;
+  }
+  if(S.ashtakScores) profiles[idx].ashtakScores=S.ashtakScores;
+  if(S.shadData){
+    // shadData: only keep name, total, components — strip planet object bloat
+    profiles[idx].shadData=S.shadData.map(p=>({
+      n:p.n,g:p.g,total:p.total,components:p.components
+    }));
+  }
+  profiles[idx].chartSavedAt=new Date().toISOString();
+
+  try{
+    const sz=JSON.stringify(profiles).length;
+    console.log('Profile storage size:',Math.round(sz/1024)+'KB');
+    localStorage.setItem(PROFILE_KEY,JSON.stringify(profiles));
+    renderProfileList();
+    console.log('Chart saved for profile:',profiles[idx].name);
+  }catch(e){
+    console.error('localStorage save failed:',e.message);
+    toast('Could not save chart — storage full. Try deleting old profiles.');
+  }
 }
 
 
@@ -850,6 +897,9 @@ function renderProfileList(){
   }).join('');
   const delBtn=document.getElementById('deleteProfileBtn');
   if(delBtn) delBtn.style.display=activeId?'inline-flex':'none';
+  // Update count indicator
+  const countEl=document.getElementById('profileCount');
+  if(countEl) countEl.textContent=profiles.length?'('+profiles.length+')':'';
 }
 
 function switchProfile(id){
@@ -878,41 +928,86 @@ function switchProfile(id){
 }
 
 function newProfile(){
-  // Clear form for a new profile entry
-  const map={Name:'',Dob:'1990-01-15',Tob:'06:30',City:'',Country:'India',Gender:'male'};
-  Object.entries(map).forEach(([k,v])=>{const el=document.getElementById('cfg'+k);if(el)el.value=v;});
-  setActiveProfileId(null);
+  // Clear activeId so Save creates a new profile
+  localStorage.removeItem(ACTIVE_KEY);
+  // Reset form to blank defaults
+  const defaults={cfgName:'',cfgDob:'1990-01-15',cfgTob:'06:30',
+    cfgCity:'',cfgCountry:'India'};
+  Object.entries(defaults).forEach(([id,val])=>{
+    const el=document.getElementById(id);
+    if(el) el.value=val;
+  });
+  const gEl=document.getElementById('cfgGender');
+  if(gEl) gEl.value='male';
+  // Re-render chips (none should be active)
   renderProfileList();
-  document.getElementById('cfgName')?.focus();
+  // Clear delete button
+  const delBtn=document.getElementById('deleteProfileBtn');
+  if(delBtn) delBtn.style.display='none';
+  // Focus name field
+  setTimeout(()=>document.getElementById('cfgName')?.focus(),100);
 }
 
 function applySettings(){
   const name=(document.getElementById('cfgName')?.value||'').trim();
-  if(!name){ toast('Please enter a name'); return; }
+  if(!name){toast('Please enter a name');return;}
+
   const profiles=loadAllProfiles();
   const activeId=getActiveProfileId();
   const now=Date.now();
+  const newId=activeId||('p'+now);
+
+  // Build profile — preserve existing chart data if this is an update
+  const existing=profiles.find(p=>p.id===newId)||null;
   const profileData={
-    id: activeId||('p'+now),
+    id: newId,
     name,
-    dob:  document.getElementById('cfgDob')?.value||'1990-01-15',
-    tob:  document.getElementById('cfgTob')?.value||'06:30',
-    city: document.getElementById('cfgCity')?.value||'',
+    dob:   document.getElementById('cfgDob')?.value   ||'1990-01-15',
+    tob:   document.getElementById('cfgTob')?.value   ||'06:30',
+    city:  document.getElementById('cfgCity')?.value  ||'',
     country:document.getElementById('cfgCountry')?.value||'India',
     gender:document.getElementById('cfgGender')?.value||'male',
-    model: document.getElementById('cfgMod')?.value||'eleven_multilingual_v2',
+    model: document.getElementById('cfgMod')?.value   ||'eleven_multilingual_v2',
     style: S.style||'modern',
     savedAt: new Date().toISOString(),
+    // Preserve chart data from existing profile (do NOT wipe it on re-save)
+    chartData:    existing?.chartData    || null,
+    dashaData:    existing?.dashaData    || null,
+    ashtakScores: existing?.ashtakScores || null,
+    shadData:     existing?.shadData     || null,
+    chartSavedAt: existing?.chartSavedAt || null,
   };
-  const existingIdx=profiles.findIndex(p=>p.id===profileData.id);
+
+  const existingIdx=profiles.findIndex(p=>p.id===newId);
   if(existingIdx>=0) profiles[existingIdx]=profileData;
   else profiles.push(profileData);
-  saveAllProfiles(profiles);
-  setActiveProfileId(profileData.id);
+
+  // Check localStorage size before saving
+  try{
+    const testStr=JSON.stringify(profiles);
+    if(testStr.length>4*1024*1024){
+      // Over 4MB — strip chart data from older profiles to save space
+      profiles.forEach((p,i)=>{
+        if(p.id!==newId&&i<profiles.length-3){
+          delete p.chartData; delete p.dashaData; delete p.shadData;
+        }
+      });
+    }
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(profiles));
+  }catch(e){
+    // localStorage quota exceeded — save without chart data
+    const lean=profiles.map(p=>({id:p.id,name:p.name,dob:p.dob,tob:p.tob,
+      city:p.city,country:p.country,gender:p.gender,model:p.model,style:p.style,
+      savedAt:p.savedAt}));
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(lean));
+    toast('Saved (chart data stripped to free storage space)');
+  }
+
+  setActiveProfileId(newId);
   profileToState(profileData);
   renderProfileList();
   closeSettings();
-  toast('Profile saved: '+name);
+  toast('✓ Profile saved: '+name);
 }
 
 function deleteProfile(){
@@ -2551,6 +2646,21 @@ async function genPredict(doSpeak){
   }
 }
 
+
+// Debug — type debugProfiles() in browser console
+function debugProfiles(){
+  const profiles=loadAllProfiles();
+  const activeId=getActiveProfileId();
+  console.group('Profiles ('+profiles.length+')');
+  profiles.forEach((p,i)=>{
+    const sz=JSON.stringify(p).length;
+    console.log((p.id===activeId?'[ACTIVE] ':'')+p.name+' | '+p.dob+' | chart:'+(p.chartData?'YES':'NO')+' | '+Math.round(sz/1024)+'KB');
+  });
+  const total=JSON.stringify(profiles).length;
+  console.log('Total: '+Math.round(total/1024)+'KB / ~5120KB');
+  console.groupEnd();
+  return profiles;
+}
 // Init
 initProfiles();
 document.getElementById('horoDate').value=new Date().toISOString().split('T')[0];
