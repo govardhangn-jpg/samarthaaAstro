@@ -413,6 +413,14 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
   50%{box-shadow:0 0 0 5px rgba(220,100,100,0)}
 }
 
+
+.chip-chart-dot{
+  display:inline-block;width:6px;height:6px;
+  border-radius:50%;background:rgba(76,200,133,.8);
+  margin-left:4px;vertical-align:middle;
+  box-shadow:0 0 4px rgba(76,200,133,.5);
+  flex-shrink:0;
+}
 </style>
 </head>
 <body>
@@ -758,6 +766,24 @@ function loadAllProfiles(){
 function saveAllProfiles(profiles){
   localStorage.setItem(PROFILE_KEY, JSON.stringify(profiles));
 }
+// ── Save computed chart data back into active profile ────────────────────────
+function saveChartToProfile(){
+  const id=getActiveProfileId();
+  if(!id) return;
+  const profiles=loadAllProfiles();
+  const idx=profiles.findIndex(p=>p.id===id);
+  if(idx<0) return;
+  // Store all computed chart data
+  if(S.chartData)    profiles[idx].chartData    = S.chartData;
+  if(S.dashaData)    profiles[idx].dashaData    = S.dashaData;
+  if(S.ashtakScores) profiles[idx].ashtakScores = S.ashtakScores;
+  if(S.shadData)     profiles[idx].shadData     = S.shadData;
+  profiles[idx].chartSavedAt = new Date().toISOString();
+  saveAllProfiles(profiles);
+  // Update profile chip to show chart is saved
+  renderProfileList();
+}
+
 
 function getActiveProfileId(){
   return localStorage.getItem(ACTIVE_KEY)||null;
@@ -768,14 +794,40 @@ function setActiveProfileId(id){
 }
 
 function profileToState(p){
-  S.name=p.name||''; S.dob=p.dob||'1990-01-15'; S.tob=p.tob||'06:30';
-  S.city=p.city||''; S.country=p.country||'India'; S.gender=p.gender||'male';
-  S.style=p.style||'modern'; S.model=p.model||'eleven_multilingual_v2';
-  S.chartData=null; S.dashaData=null; S.ashtakScores=null; S.shadData=null;
-  S.chatHistory=[];
-  // Update header display
+  S.name    = p.name   ||'';
+  S.dob     = p.dob    ||'1990-01-15';
+  S.tob     = p.tob    ||'06:30';
+  S.city    = p.city   ||'';
+  S.country = p.country||'India';
+  S.gender  = p.gender ||'male';
+  S.style   = p.style  ||'modern';
+  S.model   = p.model  ||'eleven_multilingual_v2';
+  // Restore saved chart data (if any) — do NOT null these out
+  S.chartData    = p.chartData    || null;
+  S.dashaData    = p.dashaData    || null;
+  S.ashtakScores = p.ashtakScores || null;
+  S.shadData     = p.shadData     || null;
+  S.chatHistory  = [];
+  // Update header
   const hdr=document.getElementById('userLabel');
   if(hdr) hdr.textContent=(p.name||'GN')+' '+(p.name?p.name[0]:'G');
+  // If chart data exists, render it immediately
+  if(S.chartData){
+    try{
+      renderKundliGrid(S.chartData);
+      renderPlanetTable(S.chartData);
+      renderYogas(S.chartData);
+    }catch(e){console.warn('Chart restore render:',e);}
+  }
+
+  // If chart data exists, render it immediately
+  if(S.chartData){
+    try{
+      renderKundliGrid(S.chartData);
+      renderPlanetTable(S.chartData);
+      renderYogas(S.chartData);
+    }catch(e){console.warn('Chart restore:',e);}
+  }
 }
 
 function renderProfileList(){
@@ -791,8 +843,9 @@ function renderProfileList(){
   }
   el.innerHTML=profiles.map(p=>{
     const isActive=p.id===activeId;
-    return '<button class="profile-chip'+(isActive?' active':'')+'" onclick="switchProfile(\''+p.id+'\')" title="'+p.dob+' '+p.city+'">'
-      +(isActive?'&#x25CF; ':'')+p.name
+    return '<button class="profile-chip'+(isActive?' active':'')+'" data-pid="'+p.id+'" onclick="switchProfile(this.dataset.pid)" title="'+p.dob+(p.city?' · '+p.city:'')+(p.chartData?' · ✓ Kundli saved':' · No kundli yet')+'">'
+      +(isActive?'● ':'')+p.name
+      +(p.chartData?'<span class="chip-chart-dot"></span>':'')
       +'</button>';
   }).join('');
   const delBtn=document.getElementById('deleteProfileBtn');
@@ -813,7 +866,15 @@ function switchProfile(id){
   document.querySelectorAll('.stbtn').forEach(b=>b.classList.remove('on'));
   const activeBtn=document.querySelector(`.stbtn[onclick*="${p.style||'modern'}"]`);
   if(activeBtn) activeBtn.classList.add('on');
-  toast('Switched to '+p.name);
+  toast('Switched to '+p.name+(p.chartData?' — chart loaded':''));
+  // Re-render chart if data exists
+  if(p.chartData){
+    try{
+      renderKundliGrid(p.chartData);
+      renderPlanetTable(p.chartData);
+      renderYogas(p.chartData);
+    }catch(e){console.warn('Chart re-render:',e);}
+  }
 }
 
 function newProfile(){
@@ -1425,6 +1486,7 @@ async function genKundli(){
     renderPlanetTable(chart);
     renderYogas(chart);
     toast('✦ Kundli calculated with Swiss Ephemeris');
+    saveChartToProfile();
   } catch(e) {
     console.error('Kundli error:',e);
     // Fallback to approximate
@@ -1833,6 +1895,7 @@ async function genDasha(doSpeak){
     const d=await r.json();
     if(d.error)throw new Error(d.error);
     S.dashaData=d;
+    saveChartToProfile();
     renderDashaAccurate(d,doSpeak);
   }catch(e){
     console.error('Dasha error:',e);
@@ -1927,6 +1990,7 @@ async function genAshtak(doSpeak){
     const d=await r.json();
     if(d.error)throw new Error(d.error);
     S.ashtakScores=d.sarvashtakavarga;
+    saveChartToProfile();
     renderAshtakAccurate(d,doSpeak);
   }catch(e){
     console.error('Ashtak error:',e);
@@ -2159,6 +2223,7 @@ async function genShadbala(doSpeak){
   if(!S.chartData){toast('Generate Kundli first');return}
   const cf=chartField(S.chartData);
   const shad=calcShadbala(S.chartData);S.shadData=shad;
+  saveChartToProfile();
   const maxT=Math.max(...shad.map(p=>p.total));
   let html='';
   const sorted=[...shad].sort((a,b)=>b.total-a.total);
@@ -2503,9 +2568,24 @@ document.getElementById('horoDate').value=new Date().toISOString().split('T')[0]
       const txt = await r.text();
       console.warn('Proxy test failed:', r.status, txt);
       if(r.status===404){
-        toast('⚠ Functions not deployed — push netlify/functions/claude.js to GitHub');
+        // Show a prominent banner instead of just a toast
+      document.body.insertAdjacentHTML('afterbegin',
+        '<div id="deployBanner" style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#c9963b;color:#000;padding:.6rem 1rem;font-size:.8rem;font-family:Space Mono,monospace;display:flex;align-items:center;gap:.8rem;flex-wrap:wrap">'
+        +'<strong>⚠ Netlify Functions not deployed.</strong>'
+        +' Steps: (1) git add netlify/ (2) git commit (3) git push &mdash; then set ANTHROPIC_API_KEY in Netlify Site settings → Environment variables'
+        +'<button onclick="this.parentElement.remove()" style="margin-left:auto;background:rgba(0,0,0,.2);border:none;padding:.2rem .5rem;cursor:pointer;font-size:.8rem;border-radius:3px">✕</button>'
+        +'</div>'
+      );
+      console.error('404: Netlify functions not found. Make sure netlify/functions/ is committed and pushed to GitHub.');
       } else if(r.status===500){
-        toast('⚠ Set ANTHROPIC_API_KEY in Netlify Environment Variables');
+        document.body.insertAdjacentHTML('afterbegin',
+        '<div id="deployBanner" style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#e06060;color:#fff;padding:.6rem 1rem;font-size:.8rem;font-family:Space Mono,monospace;display:flex;align-items:center;gap:.8rem;flex-wrap:wrap">'
+        +'<strong>⚠ ANTHROPIC_API_KEY missing.</strong>'
+        +' Go to: Netlify → samarthaaastro → Site configuration → Environment variables → Add variable: ANTHROPIC_API_KEY'
+        +'<button onclick="this.parentElement.remove()" style="margin-left:auto;background:rgba(255,255,255,.2);border:none;padding:.2rem .5rem;cursor:pointer;font-size:.8rem;border-radius:3px;color:#fff">✕</button>'
+        +'</div>'
+      );
+      console.error('500: ANTHROPIC_API_KEY not configured in Netlify environment variables.');
       }
     } else {
       console.log('✓ Proxy OK');
