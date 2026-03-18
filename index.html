@@ -774,47 +774,217 @@ function buildChart(dob,tob){
 }
 
 // Kundli
-function genKundli(){
+// Major city coordinates (India + global)
+const CITY_COORDS = {
+  'mumbai':{lat:19.076,lon:72.878},'delhi':{lat:28.613,lon:77.209},'bangalore':{lat:12.972,lon:77.594},
+  'bengaluru':{lat:12.972,lon:77.594},'hyderabad':{lat:17.385,lon:78.487},'chennai':{lat:13.083,lon:80.270},
+  'kolkata':{lat:22.573,lon:88.363},'pune':{lat:18.520,lon:73.856},'ahmedabad':{lat:23.023,lon:72.572},
+  'jaipur':{lat:26.913,lon:75.787},'lucknow':{lat:26.847,lon:80.947},'patna':{lat:25.594,lon:85.138},
+  'bhopal':{lat:23.259,lon:77.413},'nagpur':{lat:21.146,lon:79.083},'indore':{lat:22.719,lon:75.858},
+  'surat':{lat:21.170,lon:72.831},'vadodara':{lat:22.307,lon:73.182},'coimbatore':{lat:11.017,lon:76.955},
+  'madurai':{lat:9.925,lon:78.120},'kochi':{lat:9.932,lon:76.267},'thiruvananthapuram':{lat:8.524,lon:76.936},
+  'trivandrum':{lat:8.524,lon:76.936},'bhubaneswar':{lat:20.296,lon:85.825},'guwahati':{lat:26.144,lon:91.736},
+  'chandigarh':{lat:30.734,lon:76.779},'amritsar':{lat:31.635,lon:74.873},'jodhpur':{lat:26.295,lon:73.017},
+  'varanasi':{lat:25.317,lon:83.013},'agra':{lat:27.176,lon:78.008},'rameswaram':{lat:9.288,lon:79.317},
+  'mysore':{lat:12.296,lon:76.640},'mysuru':{lat:12.296,lon:76.640},'visakhapatnam':{lat:17.686,lon:83.218},
+  'new york':{lat:40.713,lon:-74.006},'london':{lat:51.507,lon:-0.128},'dubai':{lat:25.204,lon:55.270},
+  'singapore':{lat:1.352,lon:103.820},'toronto':{lat:43.651,lon:-79.383},'sydney':{lat:-33.869,lon:151.209},
+};
+
+function getCityCoords(cityName) {
+  const key = (cityName||'').toLowerCase().trim();
+  return CITY_COORDS[key] || CITY_COORDS['mumbai']; // default Mumbai
+}
+
+async function genKundli(){
   if(!S.dob){toast('Enter birth details in Setup');return}
-  S.chartData=buildChart(S.dob,S.tob);
-  renderKundliGrid(S.chartData);renderPlanetTable(S.chartData);renderYogas(S.chartData);toast('✦ Kundli generated');
+  document.getElementById('kundliOut').innerHTML='<div class="typing" style="padding:.5rem 0"><span></span><span></span><span></span></div><p class="csubtitle" style="margin-top:.4rem">Calculating accurate positions…</p>';
+  document.getElementById('pcardEl').style.display='none';
+  document.getElementById('yogaCardEl').style.display='none';
+  
+  const coords = getCityCoords(S.city);
+  const [y,mo,d] = S.dob.split('-').map(Number);
+  const [h,min] = (S.tob||'06:00').split(':').map(Number);
+  const hourIst = h + min/60;
+  
+  try {
+    const r = await fetch('/.netlify/functions/kundli',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({year:y,month:mo,day:d,hour_ist:hourIst,lat:coords.lat,lon:coords.lon})
+    });
+    if(!r.ok) throw new Error('Kundli function error: '+r.status);
+    const chart = await r.json();
+    if(chart.error) throw new Error(chart.error);
+    S.chartData = chart;
+    // Store in legacy format too for other functions
+    S.chartData.asc = chart.asc_sign_idx;
+    S.chartData.ascSign = chart.asc_sign;
+    S.chartData.ascSkt = chart.asc_sign_skt;
+    S.chartData.moonNak = chart.moon_nakshatra;
+    S.chartData.moonNakIdx = chart.planets.find(p=>p.name==='Moon')?.nakshatra_idx||0;
+    renderKundliGrid(chart);
+    renderPlanetTable(chart);
+    renderYogas(chart);
+    toast('✦ Kundli calculated with Swiss Ephemeris');
+  } catch(e) {
+    console.error('Kundli error:',e);
+    // Fallback to approximate
+    S.chartData = buildChart(S.dob,S.tob);
+    renderKundliGrid(S.chartData);
+    renderPlanetTable(S.chartData);
+    renderYogas(S.chartData);
+    toast('⚠ Using approximate positions (deploy kundli.js for accurate)');
+  }
 }
 async function speakKundli(){
   if(!S.chartData)genKundli();
   const c=S.chartData;
   await speak(`Your Vedic birth chart shows ${S.name||'you'} with ${c.ascSign} ascendant, Moon in ${SIGNS[c.planets[1].si]}, the ${c.moonNak} nakshatra, and Sun in ${SIGNS[c.planets[0].si]}. Jupiter resides in ${SIGNS[c.planets[4].si]}, shaping your wisdom and expansion.`);
 }
-function renderKundliGrid(c){
-  const pbh={};c.planets.forEach(p=>{if(!pbh[p.h])pbh[p.h]=[];pbh[p.h].push(p.g)});
+function renderKundliGrid(chart){
+  // Support both old and new format
+  const isNew = chart.planets && chart.planets[0] && chart.planets[0].name !== undefined;
+  const pbh={};
+  chart.planets.forEach(p=>{
+    const h = isNew ? p.house : p.h;
+    const g = isNew ? p.glyph : p.g;
+    if(!pbh[h])pbh[h]=[];
+    pbh[h].push(g);
+  });
+  const ascSkt = isNew ? chart.asc_sign_skt : (chart.ascSkt||chart.asc_sign_skt||'Asc');
+  const ascSign = isNew ? chart.asc_sign : chart.ascSign;
+  const moonNak = isNew ? chart.moon_nakshatra : chart.moonNak;
+  const ascDeg = isNew ? chart.asc_degree : '';
+  const ayan = isNew ? chart.ayanamsa : '';
+  
   const layout=[[null,12,1,2,null],[11,null,null,null,3],[10,null,'C',null,4],[9,null,null,null,5],[null,8,7,6,null]];
   let html='<div class="kgrid">';
   layout.forEach(row=>row.forEach(cell=>{
-    if(cell===null)html+='<div class="kc" style="background:rgba(0,0,0,.6);border-color:rgba(201,150,59,.04)"></div>';
-    else if(cell==='C')html+=`<div class="kc ctr"><span style="font-family:'Cinzel',serif;font-size:.5rem;color:rgba(201,150,59,.42)">Asc</span><span class="ksg">${c.ascSkt}</span></div>`;
-    else{const pl=(pbh[cell]||[]).join(' ');html+=`<div class="kc${cell===1?' asc-c':''}"><span class="khn">${cell}</span><span class="kpl">${pl}</span></div>`}
+    if(cell===null) html+='<div class="kc" style="background:rgba(0,0,0,.6);border-color:rgba(201,150,59,.04)"></div>';
+    else if(cell==='C') {
+        const ctrHtml='<div class="kc ctr"><span style="font-family:Cinzel,serif;font-size:.48rem;color:rgba(201,150,59,.42)">Lagna</span><span class="ksg">'+ascSkt+'</span>'+(ascDeg?'<span style="font-size:.52rem;color:rgba(201,150,59,.6)">'+ascDeg.toFixed(1)+'\u00b0</span>':'')+'</div>';
+        html+=ctrHtml;
+      }
+    else {
+      const pl=(pbh[cell]||[]).join(' ');
+      html+='<div class="kc'+(cell===1?' asc-c':'')+'"><span class="khn">'+cell+'</span><span class="kpl">'+pl+'</span></div>';
+    }
   }));
-  html+='</div><p style="text-align:center;font-size:.72rem;color:var(--sw);font-style:italic">Ascendant: '+c.ascSign+' · Moon Nakshatra: '+c.moonNak+'</p>';
+  html+='</div>';
+  html+='<p style="text-align:center;font-size:.72rem;color:var(--sw);font-style:italic;margin-top:.4rem">Lagna: '+ascSign+(ascDeg?' '+ascDeg.toFixed(2)+'°':'')+' · Moon Nakshatra: '+moonNak+'</p>';
+  if(ayan) html+='<p style="text-align:center;font-size:.65rem;color:rgba(201,150,59,.45);margin-top:.2rem">Lahiri Ayanamsa: '+ayan+'°</p>';
   document.getElementById('kundliOut').innerHTML=html;
 }
-function renderPlanetTable(c){
-  let html='<div style="overflow-x:auto"><table class="ptable"><thead><tr><th></th><th>Graha</th><th>Rashi</th><th>Bhava</th></tr></thead><tbody>';
-  c.planets.forEach(p=>{html+=`<tr><td class="glyph">${p.g}</td><td>${p.n}</td><td>${SSKT[p.si]} <small style="color:var(--sw)">(${SIGNS[p.si]})</small></td><td>${p.h}</td></tr>`});
+function renderPlanetTable(chart){
+  // Support both old format (p.n, p.si, p.h) and new accurate format (p.name, p.sign_idx, p.house)
+  const isNew = chart.planets[0].name !== undefined && chart.planets[0].sign_idx !== undefined;
+  let html='<div style="overflow-x:auto"><table class="ptable"><thead><tr>'
+    +'<th></th><th>Graha</th><th>Rashi</th><th>Degree</th><th>Nakshatra</th><th>Pada</th><th>H</th><th>Dignity</th>'
+    +'</tr></thead><tbody>';
+  chart.planets.forEach(p=>{
+    const name = isNew ? p.name : p.n;
+    const glyph = isNew ? p.glyph : p.g;
+    const signSkt = isNew ? p.sign_skt : SSKT[p.si];
+    const sign = isNew ? p.sign : SIGNS[p.si];
+    const degree = isNew ? p.degree : '—';
+    const nak = isNew ? p.nakshatra : '—';
+    const pada = isNew ? p.pada : '—';
+    const house = isNew ? p.house : p.h;
+    const dignity = isNew ? p.dignity : '';
+    const retro = isNew && p.retrograde ? ' <span style="color:#e8c568;font-size:.7rem">(R)</span>' : '';
+    const dignityColor = dignity==='Exalted ★'||dignity==='Exalted'?'#4caf85':dignity==='Debilitated'?'#e06060':dignity==='Own Sign'?'#e8c568':'var(--sw)';
+    html+=`<tr>
+      <td class="glyph">${glyph}</td>
+      <td>${name}${retro}</td>
+      <td>${signSkt} <small style="color:var(--sw)">(${sign})</small></td>
+      <td style="font-family:'Space Mono',monospace;font-size:.75rem">${typeof degree==='number'?degree.toFixed(2)+'°':degree}</td>
+      <td style="font-size:.78rem">${nak}</td>
+      <td style="font-family:'Space Mono',monospace;font-size:.75rem">${pada}</td>
+      <td>${house}</td>
+      <td style="font-size:.72rem;color:${dignityColor}">${dignity}</td>
+    </tr>`;
+  });
   html+='</tbody></table></div>';
-  document.getElementById('planetOut').innerHTML=html;document.getElementById('pcardEl').style.display='block';
+  html+=`<p style="font-size:.68rem;color:rgba(201,150,59,.5);margin-top:.5rem;font-style:italic">${isNew?'Calculated using Lahiri Ayanamsa · Whole Sign Houses · Swiss Ephemeris':'Approximate positions'}</p>`;
+  document.getElementById('planetOut').innerHTML=html;
+  document.getElementById('pcardEl').style.display='block';
 }
-const YRULES=[
-  {name:'Budhaditya Yoga',test:c=>c.planets[0].h===c.planets[3].h,effect:'Keen intellect and communicative brilliance — Mercury conjunct Sun enhances wit.'},
-  {name:'Gaja Kesari Yoga',test:c=>{const j=c.planets[4].h,mo=c.planets[1].h;return[1,4,7,10].includes(((j-mo+12)%12)+1)||j===mo},effect:'Wealth, reputation, noble character — Jupiter aspecting Moon brings prosperity.'},
-  {name:'Chandra Mangala Yoga',test:c=>c.planets[1].h===c.planets[2].h,effect:'Courage, ambition, financial acumen — Moon and Mars together create determination.'},
-  {name:'Malavya Yoga',test:c=>[1,4,7,10].includes(c.planets[5].h)&&[0,5,6].includes(c.planets[5].si),effect:'Venus in Kendra brings beauty, luxury, artistic gifts, and harmony.'},
-  {name:'Hamsa Yoga',test:c=>[1,4,7,10].includes(c.planets[4].h)&&[8,11,5].includes(c.planets[4].si),effect:'Jupiter in Kendra in own sign — divine grace, wisdom, and righteousness.'},
-  {name:'Neecha Bhanga Raja Yoga',test:c=>{const dep=[9,3,1,10,9,5,0,0,0];return c.planets.slice(0,7).some((p,i)=>p.si===dep[i])},effect:'A debilitated planet cancels its own weakness and confers sudden rise in life.'},
+// Helper to get planet house from either format
+function ph(chart, name) {
+  const p = chart.planets.find(x=>(x.name||x.n)===name);
+  return p ? (p.house||p.h) : 0;
+}
+function psi(chart, name) {
+  const p = chart.planets.find(x=>(x.name||x.n)===name);
+  return p ? (p.sign_idx!==undefined ? p.sign_idx : p.si) : 0;
+}
+function pdeg(chart, name) {
+  const p = chart.planets.find(x=>(x.name||x.n)===name);
+  return p ? (p.degree!==undefined ? p.degree : 0) : 0;
+}
+
+const YOGA_RULES = [
+  {name:'Budhaditya Yoga',
+   test:c=>ph(c,'Sun')===ph(c,'Mercury'),
+   effect:'Mercury and Sun in same house — keen intellect, eloquence, and mastery of knowledge.'},
+  {name:'Gaja Kesari Yoga',
+   test:c=>{const j=ph(c,'Jupiter'),mo=ph(c,'Moon');return[1,4,7,10].includes(((j-mo+12)%12)+1)||j===mo},
+   effect:'Jupiter aspecting or conjunct Moon — wealth, fame, wisdom, and noble character.'},
+  {name:'Chandra Mangala Yoga',
+   test:c=>ph(c,'Moon')===ph(c,'Mars'),
+   effect:'Moon conjunct Mars — courage, strong will, entrepreneurial spirit, and financial acumen.'},
+  {name:'Malavya Yoga (Pancha Mahapurusha)',
+   test:c=>[1,4,7,10].includes(ph(c,'Venus'))&&[1,6].includes(psi(c,'Venus')),
+   effect:'Venus in Kendra in own sign or exaltation — beauty, luxury, artistic mastery, and harmonious life.'},
+  {name:'Hamsa Yoga (Pancha Mahapurusha)',
+   test:c=>[1,4,7,10].includes(ph(c,'Jupiter'))&&[3,8,11].includes(psi(c,'Jupiter')),
+   effect:'Jupiter in Kendra in own or exalted sign — divine grace, wisdom, spiritual authority.'},
+  {name:'Ruchaka Yoga (Pancha Mahapurusha)',
+   test:c=>[1,4,7,10].includes(ph(c,'Mars'))&&[0,7].includes(psi(c,'Mars')),
+   effect:'Mars in Kendra in own sign — leadership, martial prowess, courage, and executive power.'},
+  {name:'Bhadra Yoga (Pancha Mahapurusha)',
+   test:c=>[1,4,7,10].includes(ph(c,'Mercury'))&&[2,5].includes(psi(c,'Mercury')),
+   effect:'Mercury in Kendra in own sign — supreme intelligence, oratory, and business acumen.'},
+  {name:'Shasha Yoga (Pancha Mahapurusha)',
+   test:c=>[1,4,7,10].includes(ph(c,'Saturn'))&&[9,10].includes(psi(c,'Saturn')),
+   effect:'Saturn in Kendra in own sign — discipline, leadership, longevity, and authority.'},
+  {name:'Neecha Bhanga Raja Yoga',
+   test:c=>{
+     const debSigns={Sun:6,Moon:7,Mars:3,Mercury:11,Jupiter:9,Venus:5,Saturn:0};
+     return ['Sun','Moon','Mars','Mercury','Jupiter','Venus','Saturn'].some(n=>{
+       if(psi(c,n)!==debSigns[n]) return false;
+       // Lord of debilitation sign in Kendra or the debilitated planet itself in Kendra
+       return [1,4,7,10].includes(ph(c,n));
+     });
+   },
+   effect:'Debilitated planet with cancellation conditions — weakness converts to exceptional rise and sudden fortune.'},
+  {name:'Dharma-Karmadhipati Yoga',
+   test:c=>{const asc=c.asc_sign_idx||c.asc||0;
+     const h9lord=[[8,9],[9,11],[10,1],[11,3],[0,4],[1,6],[2,8],[3,10],[4,0],[5,2],[6,5],[7,7]][asc];
+     const h10lord=[[8,9],[9,11],[10,1],[11,3],[0,4],[1,6],[2,8],[3,10],[4,0],[5,2],[6,5],[7,7]][(asc+9)%12];
+     return h9lord && h10lord && ph(c,['Sun','Moon','Mars','Mercury','Jupiter','Venus','Saturn','Rahu','Ketu'][h9lord[0]%9])===ph(c,['Sun','Moon','Mars','Mercury','Jupiter','Venus','Saturn','Rahu','Ketu'][h10lord[0]%9]);
+   },
+   effect:'9th and 10th house lords conjunct — exceptional karma, fame, prosperity, and dharmic success.'},
+  {name:'Viparita Raja Yoga',
+   test:c=>{
+     // Lords of 6th, 8th, 12th in 6th, 8th, or 12th
+     const asc=c.asc_sign_idx||c.asc||0;
+     const dusthanaHouses=[6,8,12];
+     return dusthanaHouses.some(h=>dusthanaHouses.includes(ph(c,'Saturn'))||dusthanaHouses.includes(ph(c,'Mars')));
+   },
+   effect:'Malefic lords confined to dusthana houses — enemies destroy each other; unexpected rise from adversity.'},
 ];
-function renderYogas(c){
-  const found=YRULES.filter(y=>y.test(c));
-  let html=found.length?'':'<p class="csubtitle">No major pancha mahapurusha yogas detected.</p>';
-  found.forEach(y=>{html+=`<div class="ibox amber" style="margin-bottom:.55rem"><div class="ibox-title">${y.name}</div><p>${y.effect}</p></div>`});
-  document.getElementById('yogaOut').innerHTML=html;document.getElementById('yogaCardEl').style.display='block';
+
+function renderYogas(chart){
+  const found=YOGA_RULES.filter(y=>{try{return y.test(chart)}catch(e){return false}});
+  let html=found.length?'':'<p class="csubtitle">No major yogas detected in this chart.</p>';
+  found.forEach(y=>{
+    html+='<div class="ibox amber" style="margin-bottom:.55rem">'
+      +'<div class="ibox-title">'+y.name+'</div>'
+      +'<p>'+y.effect+'</p></div>';
+  });
+  document.getElementById('yogaOut').innerHTML=html;
+  document.getElementById('yogaCardEl').style.display='block';
 }
 
 // Horoscope
