@@ -330,6 +330,9 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
         <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="rgba(201,150,59,.85)" stroke-width="2" stroke-linecap="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 19v4M8 23h8"/></svg>
       </button>
       <input class="tinput" id="userInput" placeholder="…or type your question" onkeydown="if(event.key==='Enter')sendMsg()"/>
+      <button class="sndbtn" id="stopBtn" onclick="stopSpeak()" title="Stop speaking" style="display:none;background:rgba(200,80,80,.15);border-color:rgba(200,80,80,.4)">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="rgba(220,100,100,.9)"><rect x="2" y="2" width="8" height="8" rx="1"/></svg>
+      </button>
       <button class="sndbtn" onclick="sendMsg()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(201,150,59,.9)" stroke-width="2.2" stroke-linecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
       </button>
@@ -554,18 +557,18 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
       <div class="fg"><label>Birth City</label><input id="cfgCity" placeholder="e.g. Mumbai"/></div>
       <div class="fg"><label>Country</label><input id="cfgCountry" value="India"/></div>
     </div>
-    <div class="slabel">ElevenLabs Voice</div>
-    <div class="fg" style="margin-bottom:.65rem"><label>API Key</label><input type="password" id="cfgKey" placeholder="sk_..."/></div>
-    <div class="frow">
-      <div class="fg"><label>Voice ID</label><input id="cfgVid" placeholder="Voice ID"/></div>
-      <div class="fg"><label>Model</label><select id="cfgMod">
-        <option value="eleven_multilingual_v2">Multilingual v2</option>
-        <option value="eleven_turbo_v2_5">Turbo v2.5</option>
-        <option value="eleven_turbo_v2">Turbo v2</option>
-        <option value="eleven_monolingual_v1">Monolingual v1</option>
-      </select></div>
+    <div class="slabel">Voice</div>
+    <div style="display:flex;align-items:center;gap:.7rem;padding:.55rem .75rem;background:rgba(76,175,133,.07);border:1px solid rgba(76,175,133,.28);border-radius:8px;margin-bottom:.7rem">
+      <span style="font-size:1rem">🔊</span>
+      <span style="font-size:.8rem;color:#4caf85;font-family:'Space Mono',monospace">Samarthaa Voice · Active</span>
+      <button class="abtn" style="margin-left:auto;padding:.3rem .75rem;font-size:.62rem" onclick="testVoice()">▶ Test</button>
     </div>
-    <button class="abtn" style="margin-bottom:.65rem" onclick="testVoice()">▶ Test Voice</button>
+    <div class="fg" style="margin-bottom:.7rem"><label>Voice Model</label><select id="cfgMod">
+      <option value="eleven_multilingual_v2">Multilingual v2 (Recommended)</option>
+      <option value="eleven_turbo_v2_5">Turbo v2.5 (Faster)</option>
+      <option value="eleven_turbo_v2">Turbo v2</option>
+      <option value="eleven_monolingual_v1">Monolingual v1</option>
+    </select></div>
     <div class="slabel">Reading Style</div>
     <select id="cfgStyle">
       <option value="modern" selected>Modern Interpretive</option>
@@ -607,20 +610,20 @@ function switchTab(id){
 function openSettings(){
   document.getElementById('settingsOverlay').classList.add('on');
   document.body.style.overflow='hidden';
-  const map={Name:'name',Dob:'dob',Tob:'tob',City:'city',Country:'country',Gender:'gender',Key:'elKey',Vid:'voiceId',Mod:'model',Style:'style'};
+  const map={Name:'name',Dob:'dob',Tob:'tob',City:'city',Country:'country',Gender:'gender',Mod:'model',Style:'style'};
   Object.entries(map).forEach(([k,v])=>{const el=document.getElementById('cfg'+k);if(el)el.value=S[v]||''});
 }
 function closeSettings(){document.getElementById('settingsOverlay').classList.remove('on');document.body.style.overflow=''}
 function saveSettings(){
-  const map={Name:'name',Dob:'dob',Tob:'tob',City:'city',Country:'country',Gender:'gender',Key:'elKey',Vid:'voiceId',Mod:'model',Style:'style'};
+  const map={Name:'name',Dob:'dob',Tob:'tob',City:'city',Country:'country',Gender:'gender',Mod:'model',Style:'style'};
   Object.entries(map).forEach(([k,v])=>{const el=document.getElementById('cfg'+k);if(el)S[v]=el.value.trim()});
-  const ok=S.name&&S.dob&&S.elKey&&S.voiceId;
+  const ok=S.name&&S.dob;
   document.getElementById('cfgDot').className='dot'+(ok?' ok':'');
   document.getElementById('cfgLbl').textContent=S.name||'Setup';
   closeSettings();toast('✦ Settings saved');
 }
 function testVoice(){
-  ['Key','Vid','Mod'].forEach(k=>{const el=document.getElementById('cfg'+k);if(el){if(k==='Key')S.elKey=el.value.trim();else if(k==='Vid')S.voiceId=el.value.trim();else S.model=el.value}});
+  const mod=document.getElementById('cfgMod');if(mod)S.model=mod.value;
   speak('Om. I am Samarthaa, your Vedic oracle. The stars are aligned and I am ready to illuminate your path.');
 }
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('on');setTimeout(()=>t.classList.remove('on'),3000)}
@@ -628,26 +631,70 @@ function toast(m){const t=document.getElementById('toast');t.textContent=m;t.cla
 // Voice state
 function setVS(st){
   const lbl=document.getElementById('slbl'),wave=document.getElementById('wanim'),mic=document.getElementById('micbtn');
-  if(st==='idle'){lbl.textContent='Ready';lbl.className='slbl idle';wave.style.display='none';mic.className='micbtn'}
+  if(st==='idle'){lbl.textContent='Ready';lbl.className='slbl idle';wave.style.display='none';mic.className='micbtn';const sb=document.getElementById('stopBtn');if(sb)sb.style.display='none'}
   else if(st==='listening'){lbl.textContent='Listening…';lbl.className='slbl';wave.style.display='flex';mic.className='micbtn rec'}
   else if(st==='thinking'){lbl.textContent='Thinking…';lbl.className='slbl';wave.style.display='flex';mic.className='micbtn'}
-  else if(st==='speaking'){lbl.textContent='Speaking…';lbl.className='slbl';wave.style.display='flex';mic.className='micbtn spk'}
+  else if(st==='speaking'){lbl.textContent='Speaking…';lbl.className='slbl';wave.style.display='flex';mic.className='micbtn spk';const sb=document.getElementById('stopBtn');if(sb)sb.style.display='flex'}
 }
 let curAudio=null;
+// Split text into chunks under 4800 chars at sentence boundaries
+function chunkText(text, maxLen=4800){
+  // Clean text first — strip HTML tags, extra spaces
+  text = text.replace(/<[^>]*>/g,'').replace(/\s+/g,' ').trim();
+  if(text.length <= maxLen) return [text];
+  const chunks=[];
+  let remaining=text;
+  while(remaining.length > maxLen){
+    // Find last sentence boundary before maxLen
+    let cut=remaining.lastIndexOf('. ', maxLen);
+    if(cut < maxLen*0.5) cut=remaining.lastIndexOf(', ', maxLen);
+    if(cut < maxLen*0.5) cut=maxLen;
+    chunks.push(remaining.slice(0, cut+1).trim());
+    remaining=remaining.slice(cut+1).trim();
+  }
+  if(remaining.length > 0) chunks.push(remaining);
+  return chunks;
+}
+
+async function speakChunk(text){
+  const r=await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${S.voiceId}`,{
+    method:'POST',headers:{'xi-api-key':S.elKey,'Content-Type':'application/json'},
+    body:JSON.stringify({text,model_id:S.model||'eleven_multilingual_v2',voice_settings:{stability:.65,similarity_boost:.82,style:.3,use_speaker_boost:true}})
+  });
+  if(!r.ok){const e=await r.text();console.error('EL error:',e);throw new Error('ElevenLabs error: '+r.status)}
+  return await r.blob();
+}
+
+let speakAbort=false;
 async function speak(text){
-  if(!S.elKey||!S.voiceId){toast('Add ElevenLabs key in Setup');return}
+  if(!S.elKey||!S.voiceId){toast('Voice not configured');return}
+  speakAbort=false;
+  // Stop any currently playing audio
+  if(curAudio){curAudio.pause();try{URL.revokeObjectURL(curAudio._url)}catch(e){} curAudio=null}
   setVS('speaking');
+  const chunks=chunkText(text);
   try{
-    const r=await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${S.voiceId}`,{
-      method:'POST',headers:{'xi-api-key':S.elKey,'Content-Type':'application/json'},
-      body:JSON.stringify({text,model_id:S.model||'eleven_multilingual_v2',voice_settings:{stability:.65,similarity_boost:.82,style:.3,use_speaker_boost:true}})
-    });
-    if(!r.ok){const e=await r.text();console.error(e);setVS('idle');toast('Voice error — check API key');return}
-    const blob=await r.blob();const url=URL.createObjectURL(blob);
-    if(curAudio){curAudio.pause();try{URL.revokeObjectURL(curAudio._url)}catch(e){}}
-    curAudio=new Audio(url);curAudio._url=url;curAudio.play();
-    curAudio.onended=()=>setVS('idle');
-  }catch(e){console.error(e);setVS('idle');toast('ElevenLabs connection failed')}
+    for(let i=0;i<chunks.length;i++){
+      if(speakAbort) break;
+      const blob=await speakChunk(chunks[i]);
+      if(speakAbort) break;
+      const url=URL.createObjectURL(blob);
+      await new Promise((resolve,reject)=>{
+        const audio=new Audio(url);
+        curAudio=audio;audio._url=url;
+        audio.onended=()=>{URL.revokeObjectURL(url);resolve()};
+        audio.onerror=(e)=>{URL.revokeObjectURL(url);reject(e)};
+        audio.play().catch(reject);
+      });
+    }
+  }catch(e){console.error(e);toast('Voice playback error')}
+  finally{setVS('idle')}
+}
+
+function stopSpeak(){
+  speakAbort=true;
+  if(curAudio){curAudio.pause();try{URL.revokeObjectURL(curAudio._url)}catch(e){}curAudio=null}
+  setVS('idle');
 }
 let SR=null,isRec=false;
 if('webkitSpeechRecognition'in window||'SpeechRecognition'in window){
