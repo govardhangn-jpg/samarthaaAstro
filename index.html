@@ -944,7 +944,7 @@ function setVS(st){
 }
 let curAudio=null;
 // Split text into chunks under 4800 chars at sentence boundaries
-function chunkText(text, maxLen=4800){
+function chunkText(text, maxLen=4000){
   // Clean text first — strip HTML tags, extra spaces
   text = text.replace(/<[^>]*>/g,'').replace(/\s+/g,' ').trim();
   if(text.length <= maxLen) return [text];
@@ -964,9 +964,9 @@ function chunkText(text, maxLen=4800){
 
 async function speakChunk(text){
   if(!text||!text.trim()) return null;
-  text=text.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim().slice(0,4500);
+  text=text.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
   const controller=new AbortController();
-  const tid=setTimeout(()=>controller.abort(),20000);
+  const tid=setTimeout(()=>controller.abort(),30000);
   try{
     // Use non-streaming endpoint — returns complete audio blob
     const url='https://api.elevenlabs.io/v1/text-to-speech/'+S.voiceId;
@@ -1033,12 +1033,18 @@ async function speak(text){
       try{
         blob=await speakChunk(chunks[i]);
       }catch(e){
-        if(!errorShown){
-          toast(e.message||'Voice error — check ElevenLabs key');
-          errorShown=true;
-          console.error('speakChunk error:',e);
+        console.error('speakChunk chunk',i,'error:',e.message);
+        // Retry once with shorter text
+        try{
+          const shortText=chunks[i].slice(0,2000);
+          blob=await speakChunk(shortText);
+        }catch(e2){
+          if(!errorShown){
+            toast(e.message||'Voice error — check connection');
+            errorShown=true;
+          }
+          continue; // Skip failed chunk, try next
         }
-        break;
       }
       if(speakAbort||!blob) break;
       const url=URL.createObjectURL(blob);
@@ -1711,7 +1717,10 @@ function renderHoroscope(h,doSpeak){
     }
   }
   document.getElementById('horoOut').innerHTML=html;
-  if(doSpeak&&h.overall)speak(h.overall+(h.remedy?' Remedy: '+h.remedy:''));
+  if(doSpeak&&h.overall){
+    const sectionText=(h.sections||[]).map(s=>s.title+': '+s.body).join(' ');
+    speak(h.overall+' '+sectionText+(h.remedy?' Today\'s remedy: '+h.remedy:'')+(h.mantra?' Mantra: '+h.mantra:''));
+  }
 }
 
 // Transits
@@ -1763,9 +1772,11 @@ async function genTransits(doSpeak){
     });
     document.getElementById('transitOut').innerHTML=html;
     if(doSpeak){
-      const major=d.planets.filter(p=>['Saturn','Jupiter','Rahu','Mars'].includes(p.name));
-      const spoken=major.map(p=>{const interp=interpretations.find(i=>i.planet===p.name);return p.name+' in H'+p.transit_house+': '+(interp?interp.body:p.sign+', '+p.quality);}).join(' ');
-      speak("Today's key transits for "+(S.name||'you')+'. '+spoken);
+      const allPlanetText=d.planets.map(p=>{
+        const interp=interpretations.find(i=>i.planet===p.name);
+        return p.name+' is in '+p.sign+', house '+p.transit_house+(p.special_note?' — '+p.special_note:'')+(interp?'. '+interp.body:'');
+      }).join('. ');
+      speak('Gochara transit reading for '+(S.name||'you')+' today. '+allPlanetText);
     }
   }catch(e){document.getElementById('transitOut').innerHTML='<p class="csubtitle">Error: '+e.message+'</p>';console.error('transit error:',e)}
 }
@@ -2468,7 +2479,7 @@ async function genPredict(doSpeak){
       +'<div style="font-size:.82rem;color:var(--sw)">'+curDasha+' Mahadasha'+(curAntar?' / '+curAntar:'')+(curRem?' \u00B7 '+curRem:'')+' \u00B7 '+todayVar+' \u00B7 '+cf.moonNak+' nakshatra</div>'
       +'</div></div>';
     document.getElementById('predictOut').innerHTML=html;
-    if(doSpeak)speak(txt.slice(0,500));
+    if(doSpeak)speak(txt);
   }catch(e){
     document.getElementById('predictOut').innerHTML='<div class="card"><p class="csubtitle">Error: '+e.message+'</p></div>';
     console.error('predict error:',e);
