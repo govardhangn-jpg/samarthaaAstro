@@ -1150,12 +1150,38 @@ async function genHoroscope(doSpeak){
   }catch(e){document.getElementById('horoOut').innerHTML='<p class="csubtitle">Error: '+e.message+'</p>';console.error('horoscope error:',e)}
 }
 function renderHoroscope(h,doSpeak){
-  let html=`<div class="ibox amber"><p>${h.overall}</p><div style="display:flex;gap:.9rem;margin-top:.5rem;flex-wrap:wrap;font-size:.72rem;color:var(--sw)"><span>🔢 <strong style="color:var(--gl)">${h.lucky_number}</strong></span><span>🎨 <strong style="color:var(--gl)">${h.lucky_color}</strong></span><span>⏰ <strong style="color:var(--gl)">${h.lucky_time}</strong></span></div></div>`;
-  (h.sections||[]).forEach(s=>{html+=`<div class="hsec"><h3>${s.title}</h3><p>${s.body}</p><div class="hmeter"><span class="hml">Energy</span><div class="htrack"><div class="hfill" style="width:${s.score}%"></div></div><span class="hnum">${s.score}%</span></div></div>`});
-  if(h.remedy)html+=`<div class="ibox green"><div class="ibox-title">TODAY'S REMEDY</div><p>${h.remedy}</p></div>`;
-  if(h.mantra)html+=`<div class="ibox amber"><div class="ibox-title">MANTRA</div><p style="font-family:Space Mono,monospace;font-size:.78rem;color:var(--gl)">${h.mantra}</p></div>`;
+  if(!h||typeof h!=='object'){document.getElementById('horoOut').innerHTML='<p class="csubtitle">Generate your Kundli first, then click Read.</p>';return}
+  const lucky_number=h.lucky_number||'7';
+  const lucky_color=h.lucky_color||'Gold';
+  const lucky_time=h.lucky_time||'Sunrise';
+  let html='<div class="ibox amber"><p>'+(h.overall||'')+'</p>'
+    +'<div style="display:flex;gap:.9rem;margin-top:.5rem;flex-wrap:wrap;font-size:.72rem;color:var(--sw)">'
+    +'<span>\uD83D\uDD22 <strong style="color:var(--gl)">'+lucky_number+'</strong></span>'
+    +'<span>\uD83C\uDFA8 <strong style="color:var(--gl)">'+lucky_color+'</strong></span>'
+    +'<span>\u23F0 <strong style="color:var(--gl)">'+lucky_time+'</strong></span>'
+    +'</div></div>';
+  (h.sections||[]).forEach(s=>{
+    html+='<div class="hsec"><h3>'+s.title+'</h3><p>'+s.body+'</p>'
+      +'<div class="hmeter"><span class="hml">Energy</span>'
+      +'<div class="htrack"><div class="hfill" style="width:'+s.score+'%"></div></div>'
+      +'<span class="hnum">'+s.score+'%</span></div></div>';
+  });
+  if(h.remedy) html+='<div class="ibox green"><div class="ibox-title">TODAY\'S REMEDY</div><p>'+h.remedy+'</p></div>';
+  if(h.mantra) html+='<div class="ibox amber" style="text-align:center"><div class="ibox-title">MANTRA</div><p style="font-style:italic;font-size:.95rem">'+h.mantra+'</p></div>';
+  // Show accurate transit summary if available
+  if(h._transitData){
+    const td=h._transitData;
+    const challenging=td.planets.filter(p=>p.quality==='challenging');
+    const favourable=td.planets.filter(p=>p.quality==='favourable');
+    if(challenging.length||favourable.length){
+      html+='<div style="font-size:.68rem;color:var(--sw);margin-top:.5rem;padding:.4rem .6rem;background:rgba(255,255,255,.03);border-radius:7px">';
+      if(favourable.length) html+='<span style="color:rgba(76,200,133,.7)">\u2714 Favourable: '+favourable.map(p=>p.name+' H'+p.transit_house).join(', ')+'</span> ';
+      if(challenging.length) html+='<span style="color:rgba(220,100,100,.7)">\u26A0 Challenging: '+challenging.map(p=>p.name+' H'+p.transit_house+(p.special_note?' ('+p.special_note+')':'')).join(', ')+'</span>';
+      html+='</div>';
+    }
+  }
   document.getElementById('horoOut').innerHTML=html;
-  if(doSpeak)speak(`${h.overall} For health: ${(h.sections[0]||{}).body||''} For career: ${(h.sections[1]||{}).body||''} Remedy: ${h.remedy||''} Mantra: ${h.mantra||''}`);
+  if(doSpeak&&h.overall)speak(h.overall+(h.remedy?' Remedy: '+h.remedy:''));
 }
 
 // Transits
@@ -1169,7 +1195,7 @@ async function genTransits(doSpeak){
   const prompt=`Vedic transit analysis for ${S.name||'seeker'} today ${now.toDateString()}. Natal: ${natal}. Asc: ${S.chartData.ascSign}. Today: ${today}. Return ONLY valid JSON array no markdown: [{"planet":"Saturn","glyph":"♄","title":"short title","body":"2 sentences","date":"period active"},{"planet":"Jupiter","glyph":"♃","title":"..","body":"..","date":".."},{"planet":"Mars","glyph":"♂","title":"..","body":"..","date":".."},{"planet":"Venus","glyph":"♀","title":"..","body":"..","date":".."},{"planet":"Rahu","glyph":"☊","title":"..","body":"..","date":".."}]`;
   try{
     const r=await fetch('/.netlify/functions/claude',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,system:'Respond ONLY with valid JSON array. No markdown.',messages:[{role:'user',content:prompt}]})});
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,system:'Respond ONLY with a valid JSON array. No markdown, no backticks. Start with [',messages:[{role:'user',content:prompt}]})});
     const d=await r.json();let txt=d.content?.[0]?.text||'[]';txt=txt.replace(/```json|```/g,'').trim();
     let tr;try{tr=JSON.parse(txt)}catch(e){tr=null}
     if(!tr||!tr.length){document.getElementById('transitOut').innerHTML='<p class="csubtitle">Parse error. Try again.</p>';return}
@@ -1399,13 +1425,13 @@ function renderAshtakAccurate(d,doSpeak){
 async function genAshtakAI(scores,strong,weak,doSpeak){
   document.getElementById('ashtakAICard').style.display='block';
   document.getElementById('ashtakAI').innerHTML='<div class="typing" style="padding:.4rem 0"><span></span><span></span><span></span></div>';
-  const c=S.chartData;
-  const prompt=`Ashtakavarga reading for ${S.name||'seeker'}. Asc: ${c.ascSign}. Moon Nakshatra: ${c.moonNak}. Sarvashtakavarga H1-H12: ${scores.join(',')}. Strong (28+): ${strong.join(',')||'none'}. Weak (24-): ${weak.join(',')||'none'}. Flowing prose interpretation 220 words — overall life strength, strong house gifts, weak house warnings with specific remedies, timing advice, one gemstone or mantra.`;
+  const cf=chartField(S.chartData);
+  const prompt='Ashtakavarga reading for '+(S.name||'seeker')+'. Asc: '+cf.ascSign+'. Moon: '+cf.moonSign+' ('+cf.moonNak+'). Sarvashtakavarga H1-H12: '+scores.join(',')+'. Strong (30+): '+(strong.join(',')||'none')+'. Weak (24-): '+(weak.join(',')||'none')+'. Flowing prose 220 words: overall life strength, strong house gifts, weak house warnings with specific remedies, timing advice, one gemstone or mantra.';
   try{
     const r=await fetch('/.netlify/functions/claude',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:900,system:'You are Samarthaa. Flowing prose only. No markdown, no bullets.',messages:[{role:'user',content:prompt}]})});
     const d=await r.json();const txt=d.content?.[0]?.text||'Reading unavailable.';
-    document.getElementById('ashtakAI').innerHTML=`<p style="font-size:.88rem;line-height:1.7;color:var(--iv);font-style:italic">${txt}</p>`;
+    document.getElementById('ashtakAI').innerHTML='<p style="font-size:.88rem;line-height:1.7;color:var(--iv);font-style:italic">'+txt+'</p>';
     if(doSpeak)speak(txt);
   }catch(e){document.getElementById('ashtakAI').innerHTML='<p class="csubtitle">Error: '+e.message+'</p>';console.error('ashtak error:',e)}
 }
@@ -1481,35 +1507,45 @@ function renderPrashna(pr,panch,shakuna,dir,dq,dt,q,doSpeak){
 // Navamsa D9
 function calcNavamsa(sign){return(sign*9)%12}
 async function genNavamsa(doSpeak){
-  if(!S.dob){toast('Enter birth details');return}
-  if(!S.chartData)S.chartData=buildChart(S.dob,S.tob);
-  const c=S.chartData;
-  const d9Planets=S.chartData.planets.map(p=>({...p,d9si:calcNavamsa(p.si),d9sign:SIGNS[calcNavamsa(p.si)],d9skt:SSKT[calcNavamsa(p.si)]}));
-  const d9asc=calcNavamsa(S.chartData.asc_sign_idx!==undefined?S.chartData.asc_sign_idx:(S.chartData.asc||0));
-  let html=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem;margin-bottom:.8rem">
-  <div><div style="font-family:'Cinzel',serif;font-size:.66rem;color:var(--gold);letter-spacing:.07em;margin-bottom:.5rem">RASHI (D1)</div>
-  <div style="overflow-x:auto"><table class="ptable"><thead><tr><th>Graha</th><th>D1 Sign</th></tr></thead><tbody>`;
-  c.planets.slice(0,7).forEach(p=>{html+=`<tr><td>${p.g} ${p.n}</td><td>${SSKT[p.si]}</td></tr>`});
-  html+=`</tbody></table></div></div>
-  <div><div style="font-family:'Cinzel',serif;font-size:.66rem;color:var(--gold);letter-spacing:.07em;margin-bottom:.5rem">NAVAMSA (D9)</div>
-  <div style="overflow-x:auto"><table class="ptable"><thead><tr><th>Graha</th><th>D9 Sign</th></tr></thead><tbody>`;
-  d9Planets.slice(0,7).forEach(p=>{
-    const same=p.si===p.d9si;
-    html+=`<tr><td>${p.g} ${p.n}</td><td style="${same?'color:#4caf85;font-weight:500':''}">${p.d9skt}${same?' ★':''}</td></tr>`;
+  if(!S.dob){toast('Enter birth details in Setup');return}
+  if(!S.chartData) await genKundli();
+  if(!S.chartData){toast('Generate Kundli first');return}
+  const cf=chartField(S.chartData);
+  const planets=S.chartData.planets;
+  const d9Planets=planets.slice(0,7).map(p=>{
+    const si=p.sign_idx!==undefined?p.sign_idx:p.si;
+    const d9si=calcNavamsa(si);
+    return{...p,si,d9si,d9sign:SIGNS[d9si],d9skt:SSKT[d9si]};
   });
-  html+=`</tbody></table></div></div></div>
-  <p style="font-size:.72rem;color:var(--sw);font-style:italic">★ = Vargottama (same sign in D1 & D9 — exceptionally powerful planet)</p>
-  <p style="font-size:.72rem;color:var(--sw);margin-top:.3rem">Navamsa Ascendant: <strong style="color:var(--gl)">${SIGNS[d9asc]} (${SSKT[d9asc]})</strong></p>`;
+  const d9asc=calcNavamsa(cf.ascSi);
+  let html='<div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem;margin-bottom:.8rem">'
+    +'<div><div style="font-family:Cinzel,serif;font-size:.66rem;color:var(--gold);letter-spacing:.07em;margin-bottom:.5rem">RASHI (D1)</div>'
+    +'<div style="overflow-x:auto"><table class="ptable"><thead><tr><th>Graha</th><th>D1 Sign</th></tr></thead><tbody>';
+  d9Planets.forEach(p=>{
+    const nm=p.name||p.n, gl=p.glyph||p.g, si=p.si;
+    html+='<tr><td>'+gl+' '+nm+'</td><td>'+SSKT[si]+'</td></tr>';
+  });
+  html+='</tbody></table></div></div>'
+    +'<div><div style="font-family:Cinzel,serif;font-size:.66rem;color:var(--gold);letter-spacing:.07em;margin-bottom:.5rem">NAVAMSA (D9)</div>'
+    +'<div style="overflow-x:auto"><table class="ptable"><thead><tr><th>Graha</th><th>D9 Sign</th></tr></thead><tbody>';
+  d9Planets.forEach(p=>{
+    const nm=p.name||p.n, gl=p.glyph||p.g;
+    const same=p.si===p.d9si;
+    html+='<tr><td>'+gl+' '+nm+'</td><td style="'+(same?'color:#4caf85;font-weight:500':'')+'">'+p.d9skt+(same?' \u2605':'')+'</td></tr>';
+  });
+  html+='</tbody></table></div></div></div>'
+    +'<p style="font-size:.72rem;color:var(--sw);font-style:italic">\u2605 = Vargottama (same sign in D1 & D9 \u2014 exceptionally powerful planet)</p>'
+    +'<p style="font-size:.72rem;color:var(--sw);margin-top:.3rem">Navamsa Ascendant: <strong style="color:var(--gl)">'+SIGNS[d9asc]+' ('+SSKT[d9asc]+')</strong></p>';
   document.getElementById('navamsaOut').innerHTML=html;
   document.getElementById('navamsaAICard').style.display='block';
   document.getElementById('navamsaAI').innerHTML='<div class="typing" style="padding:.4rem 0"><span></span><span></span><span></span></div>';
-  const vargottama=d9Planets.filter(p=>p.si===p.d9si).map(p=>p.n);
-  const prompt=`Navamsa (D9) reading for ${S.name||'seeker'}. Natal Asc: ${c.ascSign}. Moon Nakshatra: ${c.moonNak}. Navamsa Asc: ${SIGNS[d9asc]}. Vargottama planets (same in D1+D9): ${vargottama.join(', ')||'none'}. D9 placements: ${d9Planets.slice(0,7).map(function(p){return p.n+' in '+p.d9sign;}).join(', ')}. Write 220 words of flowing Navamsa interpretation: dharma and soul purpose, marriage and partnership destiny, spiritual gifts, vargottama planet significance, timing when D9 activates.`;
+  const vargottama=d9Planets.filter(p=>p.si===p.d9si).map(p=>p.name||p.n);
+  const prompt='Navamsa (D9) reading for '+(S.name||'seeker')+'. Natal Asc: '+cf.ascSign+'. Moon: '+cf.moonSign+' ('+cf.moonNak+'). Navamsa Asc: '+SIGNS[d9asc]+'. Vargottama: '+(vargottama.join(', ')||'none')+'. D9 placements: '+d9Planets.map(p=>(p.name||p.n)+' in '+p.d9sign).join(', ')+'. Write 220 words of flowing Navamsa interpretation: dharma and soul purpose, marriage destiny, spiritual gifts, vargottama significance, timing when D9 activates.';
   try{
     const r=await fetch('/.netlify/functions/claude',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:900,system:'You are Samarthaa. Flowing prose only. No markdown.',messages:[{role:'user',content:prompt}]})});
     const d=await r.json();const txt=d.content?.[0]?.text||'Reading unavailable.';
-    document.getElementById('navamsaAI').innerHTML=`<p style="font-size:.88rem;line-height:1.7;color:var(--iv);font-style:italic">${txt}</p>`;
+    document.getElementById('navamsaAI').innerHTML='<p style="font-size:.88rem;line-height:1.7;color:var(--iv);font-style:italic">'+txt+'</p>';
     if(doSpeak)speak(txt);
   }catch(e){document.getElementById('navamsaAI').innerHTML='<p class="csubtitle">Error: '+e.message+'</p>';console.error('navamsa error:',e)}
 }
@@ -1518,25 +1554,34 @@ async function genNavamsa(doSpeak){
 function calcShadbala(chart){
   const exaltation=[0,1,9,5,3,11,6];
   const ownSigns=[[4],[3],[0,7],[2,5],[8,11],[1,6],[9,10]];
-  return PLANET_DEFS.map((pl,i)=>{
-    const p=chart.planets[i];
+  const pDefs=[
+    {n:'Sun',g:'\u2609'},{n:'Moon',g:'\u263d'},{n:'Mars',g:'\u2642'},
+    {n:'Mercury',g:'\u263f'},{n:'Jupiter',g:'\u2643'},{n:'Venus',g:'\u2640'},{n:'Saturn',g:'\u2644'}
+  ];
+  return pDefs.map((pl,i)=>{
+    const p=chart.planets.find(x=>(x.name||x.n)===pl.n)||chart.planets[i];
+    const si=p.sign_idx!==undefined?p.sign_idx:(p.si||0);
+    const h=p.house!==undefined?p.house:(p.h||1);
     let sthana=5;
-    if(p.si===exaltation[i])sthana=10;
-    else if(ownSigns[i].includes(p.si))sthana=8;
-    else if((p.si+6)%12===exaltation[i])sthana=2;
-    const dig=[4,7,0,0,3,3,6];const digBala=p.h===(dig[i]+1)?8:Math.max(2,8-Math.abs(p.h-(dig[i]+1)));
+    if(si===exaltation[i]) sthana=10;
+    else if(ownSigns[i].includes(si)) sthana=8;
+    else if((si+6)%12===exaltation[i]) sthana=2;
+    const digDir=[4,7,0,0,3,3,6];
+    const digBala=h===(digDir[i]+1)?8:Math.max(2,8-Math.abs(h-(digDir[i]+1)));
     const kaala=Math.floor(Math.random()*4)+4;
-    const chesta=Math.floor(Math.random()*3)+3;
+    const chesta=p.retrograde?7:(Math.floor(Math.random()*3)+3);
     const naisargika=[6,2,3,5,7,4,1][i];
     const drik=Math.floor(Math.random()*3)+2;
     const total=(sthana+digBala+kaala+chesta+naisargika+drik)/6;
-    return{...pl,sthana,digBala,kaala,chesta,naisargika,drik,total:+total.toFixed(1),
+    return{...pl,sthana,digBala,kaala,chesta,naisargika,drik,total:+total.toFixed(1),si,h,
       components:{Sthana:sthana,Dig:digBala,Kaala:kaala,Chesta:chesta,Naisargika:naisargika,Drik:drik}};
   });
 }
 async function genShadbala(doSpeak){
-  if(!S.dob){toast('Enter birth details');return}
-  if(!S.chartData)S.chartData=buildChart(S.dob,S.tob);
+  if(!S.dob){toast('Enter birth details in Setup');return}
+  if(!S.chartData) await genKundli();
+  if(!S.chartData){toast('Generate Kundli first');return}
+  const cf=chartField(S.chartData);
   const shad=calcShadbala(S.chartData);S.shadData=shad;
   const maxT=Math.max(...shad.map(p=>p.total));
   let html='';
@@ -1545,21 +1590,21 @@ async function genShadbala(doSpeak){
     const pct=Math.round((p.total/maxT)*100);
     const col=pct>=80?'#4caf85':pct>=55?'#c9963b':'#e06060';
     const strength=pct>=80?'Very Strong':pct>=65?'Strong':pct>=50?'Moderate':pct>=35?'Weak':'Very Weak';
-    html+=`<div class="shad-row"><div class="shad-planet"><span class="shad-glyph">${p.g}</span><span class="shad-name">${p.n}</span></div>
-    <div class="shad-track"><div class="shad-fill" style="width:${pct}%;background:${col}"></div></div>
-    <div class="shad-score" style="color:${col}">${p.total} — ${strength}</div></div>`;
+    html+='<div class="shad-row"><div class="shad-planet"><span class="shad-glyph">'+p.g+'</span><span class="shad-name">'+p.n+'</span></div>'
+      +'<div class="shad-track"><div class="shad-fill" style="width:'+pct+'%;background:'+col+'"></div></div>'
+      +'<div class="shad-score" style="color:'+col+'">'+p.total+' \u2014 '+strength+'</div></div>';
   });
   document.getElementById('shadOut').innerHTML=html;
   document.getElementById('shadAICard').style.display='block';
   document.getElementById('shadAI').innerHTML='<div class="typing" style="padding:.4rem 0"><span></span><span></span><span></span></div>';
   const top3=sorted.slice(0,3).map(p=>p.n).join(', ');
   const weak3=sorted.slice(-3).map(p=>p.n).join(', ');
-  const prompt=`Shadbala reading for ${S.name||'seeker'}. Asc ${S.chartData.ascSign}. Planet strength scores: ${shad.map(p=>p.n+': '+p.total).join(', ')}. Strongest: ${top3}. Weakest: ${weak3}. Write 200 words: what strong planets deliver, how weak planets create vulnerabilities, remedies for weak planets, how this affects career, relationships, and health.`;
+  const prompt='Shadbala reading for '+(S.name||'seeker')+'. Asc '+cf.ascSign+'. Planet strength: '+shad.map(p=>p.n+': '+p.total).join(', ')+'. Strongest: '+top3+'. Weakest: '+weak3+'. Write 200 words: what strong planets deliver, how weak planets create vulnerabilities, remedies for weak planets, how this affects career, relationships, and health.';
   try{
     const r=await fetch('/.netlify/functions/claude',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,system:'You are Samarthaa. Flowing prose only. No markdown.',messages:[{role:'user',content:prompt}]})});
     const d=await r.json();const txt=d.content?.[0]?.text||'Reading unavailable.';
-    document.getElementById('shadAI').innerHTML=`<p style="font-size:.88rem;line-height:1.7;color:var(--iv);font-style:italic">${txt}</p>`;
+    document.getElementById('shadAI').innerHTML='<p style="font-size:.88rem;line-height:1.7;color:var(--iv);font-style:italic">'+txt+'</p>';
     if(doSpeak)speak(txt);
   }catch(e){document.getElementById('shadAI').innerHTML='<p class="csubtitle">Error: '+e.message+'</p>';console.error('shadbala error:',e)}
 }
@@ -1569,20 +1614,30 @@ async function genMuhurta(doSpeak){
   const de=document.getElementById('muhurtaDate');if(!de.value)de.value=new Date().toISOString().split('T')[0];
   const date=de.value;const type=document.getElementById('muhurtaType').value;
   document.getElementById('muhurtaOut').innerHTML='<div class="typing" style="padding:.4rem 0"><span></span><span></span><span></span></div>';
-  const chart=S.chartData||null;
-  const prompt=`Muhurta auspicious timing for purpose: "${type}" on date ${date}.
-${chart?`Personal chart: Asc ${chart.ascSign}, Moon ${SIGNS[chart.planets[1].si]}, nakshatra ${chart.moonNak}.`:'No personal chart available.'}
-Return ONLY valid JSON array (6 time slots, no markdown): [{"time":"6:00 AM - 7:30 AM","quality":"good","name":"Brahma Muhurta","body":"Why this time is auspicious for this purpose"},{"time":"9:00 AM - 10:30 AM","quality":"neutral","name":"..","body":".."},{"time":"11:00 AM - 12:30 PM","quality":"bad","name":"Rahu Kaal","body":".."},{"time":"2:00 PM - 3:30 PM","quality":"good","name":"..","body":".."},{"time":"4:30 PM - 6:00 PM","quality":"neutral","name":"..","body":".."},{"time":"7:00 PM - 8:30 PM","quality":"good","name":"..","body":".."}]`;
+  const cf=S.chartData?chartField(S.chartData):null;
+  // Get today's moon nakshatra via transit function
+  let moonNakToday='';
+  try{
+    const tr=await fetch('/.netlify/functions/transit',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({date_str:date,natal_asc_si:cf?.ascSi||0,natal_moon_si:cf?.moonSi||0,natal_planet_signs:cf?.allPlanetSigns||{}})});
+    const td=await tr.json();
+    moonNakToday=td.panchanga?.moon_nakshatra||'';
+  }catch(e){}
+  const chartCtx=cf?('Personal chart: Asc '+cf.ascSign+', Moon '+cf.moonSign+' ('+cf.moonNak+').'):'No personal chart.';
+  const prompt='Muhurta auspicious timing for: "'+type+'" on '+date+'. '+chartCtx+(moonNakToday?' Moon today in '+moonNakToday+' nakshatra.':'')+' Return ONLY valid JSON array (6 time slots, no markdown): [{"time":"6:00 AM - 7:30 AM","quality":"good","name":"Brahma Muhurta","body":"Why auspicious for this purpose"},{"time":"9:00 AM - 10:30 AM","quality":"neutral","name":"..","body":".."},{"time":"11:00 AM - 12:30 PM","quality":"bad","name":"Rahu Kaal","body":".."},{"time":"2:00 PM - 3:30 PM","quality":"good","name":"..","body":".."},{"time":"4:30 PM - 6:00 PM","quality":"neutral","name":"..","body":".."},{"time":"7:00 PM - 8:30 PM","quality":"good","name":"..","body":".."}]';
   try{
     const r=await fetch('/.netlify/functions/claude',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,system:'Respond ONLY with valid JSON array. No markdown.',messages:[{role:'user',content:prompt}]})});
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,system:'Respond ONLY with valid JSON array. No markdown, no backticks.',messages:[{role:'user',content:prompt}]})});
     const d=await r.json();let txt=d.content?.[0]?.text||'[]';txt=txt.replace(/```json|```/g,'').trim();
     let mu;try{mu=JSON.parse(txt)}catch(e){mu=null}
     if(!mu||!mu.length){document.getElementById('muhurtaOut').innerHTML='<p class="csubtitle">Parse error. Try again.</p>';return}
     let html='',best=null;
-    mu.forEach(m=>{html+=`<div class="muhurta-slot"><div class="ms-quality ${m.quality}"></div><div class="ms-time">${m.time.split(' - ')[0]}</div><div class="ms-info"><div class="ms-name">${m.name}</div><div class="ms-body">${m.body}</div></div></div>`;if(m.quality==='good'&&!best)best=m});
+    mu.forEach(m=>{
+      html+='<div class="muhurta-slot"><div class="ms-quality '+m.quality+'"></div><div class="ms-time">'+(m.time.split(' - ')[0])+'</div><div class="ms-info"><div class="ms-name">'+m.name+'</div><div class="ms-body">'+m.body+'</div></div></div>';
+      if(m.quality==='good'&&!best)best=m;
+    });
     document.getElementById('muhurtaOut').innerHTML=html;
-    if(doSpeak&&best)speak(`The best Muhurta for ${type} on ${date} is ${best.name} at ${best.time}. ${best.body}`);
+    if(doSpeak&&best)speak('The best Muhurta for '+type+' on '+date+' is '+best.name+' at '+best.time+'. '+best.body);
   }catch(e){document.getElementById('muhurtaOut').innerHTML='<p class="csubtitle">Error: '+e.message+'</p>';console.error('muhurta error:',e)}
 }
 
