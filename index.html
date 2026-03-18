@@ -281,28 +281,103 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
   .avg-grid{grid-template-columns:repeat(6,1fr)}
   .kc{min-height:72px}
 }
-
-/* ── South Indian Chart ── */
-.si-chart{display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(4,1fr);border:2px solid rgba(201,150,59,.45);width:100%;max-width:360px;margin:0 auto .7rem;background:rgba(0,0,0,.4)}
-.si-cell{border:1px solid rgba(201,150,59,.2);padding:4px 5px;display:flex;flex-direction:column;justify-content:space-between;min-height:72px;position:relative}
-.si-inner{grid-column:2/4;grid-row:2/4;border:1px solid rgba(201,150,59,.15);background:rgba(201,150,59,.04);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
-.si-asc{border-color:rgba(201,150,59,.55);background:rgba(201,150,59,.07)}
-.si-sign{font-family:Cinzel,serif;font-size:.52rem;color:rgba(201,150,59,.55);letter-spacing:.04em;line-height:1.3}
-.si-planets{font-size:.9rem;color:var(--gl);line-height:1.3;text-align:center;flex:1;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:2px}
-.si-asc-marker{background:rgba(201,150,59,.28);color:var(--gl);font-size:.48rem;padding:.04rem .22rem;border-radius:3px;margin-right:2px;font-family:Cinzel,serif;vertical-align:middle}
-.si-ctr-label{font-family:Cinzel,serif;font-size:.52rem;color:rgba(201,150,59,.4);letter-spacing:.07em}
-.si-ctr-asc{font-family:Cinzel,serif;font-size:.7rem;color:var(--gold)}
-.si-ctr-deg{font-size:.58rem;color:rgba(201,150,59,.6)}
-.si-info{display:flex;flex-wrap:wrap;gap:.4rem .9rem;justify-content:center;font-size:.67rem;color:var(--sw);font-style:italic;margin-top:.3rem}
-@media(max-width:380px){.si-chart{max-width:100%}.si-cell{min-height:58px}.si-planets{font-size:.78rem}}
+@media(max-width:380px){}
 
 
 /* ── Profile chips ── */
 .profile-chip{display:inline-flex;align-items:center;gap:.25rem;padding:.28rem .65rem;border-radius:20px;font-size:.71rem;cursor:pointer;border:1px solid rgba(201,150,59,.3);background:rgba(201,150,59,.07);color:var(--sw);transition:all .2s;font-family:Space Mono,monospace;white-space:nowrap;max-width:130px;overflow:hidden;text-overflow:ellipsis}
 .profile-chip:hover{border-color:rgba(201,150,59,.6);background:rgba(201,150,59,.15)}
 .profile-chip.active{border-color:var(--gold);background:rgba(201,150,59,.22);color:var(--gl);font-weight:600}
-
-</style>
+/* ── South Indian Kundli Chart ──────────────────────────────────────────── */
+.si-chart{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  grid-template-rows:repeat(4,1fr);
+  width:100%;max-width:380px;
+  aspect-ratio:1/1;
+  margin:0 auto .8rem;
+  border:2px solid rgba(201,150,59,.5);
+  background:rgba(0,0,0,.45);
+  box-shadow:0 0 24px rgba(201,150,59,.08);
+  border-radius:2px;
+}
+.si-cell{
+  border:1px solid rgba(201,150,59,.18);
+  padding:5px 6px;
+  display:flex;flex-direction:column;
+  justify-content:space-between;
+  position:relative;overflow:hidden;
+  transition:background .15s;
+}
+.si-cell:hover{background:rgba(201,150,59,.05)}
+.si-inner{
+  grid-column:2/4;grid-row:2/4;
+  border:1px solid rgba(201,150,59,.2);
+  background:radial-gradient(ellipse at center,rgba(201,150,59,.07) 0%,rgba(0,0,0,.3) 100%);
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  gap:3px;cursor:default;
+}
+.si-inner:hover{background:radial-gradient(ellipse at center,rgba(201,150,59,.1) 0%,rgba(0,0,0,.3) 100%)}
+.si-asc{
+  border-color:rgba(201,150,59,.6)!important;
+  background:rgba(201,150,59,.1)!important;
+  box-shadow:inset 0 0 12px rgba(201,150,59,.08);
+}
+.si-sign{
+  font-family:Cinzel,serif;
+  font-size:.56rem;
+  color:rgba(201,150,59,.65);
+  letter-spacing:.03em;
+  line-height:1.2;
+  display:flex;align-items:center;gap:3px;
+}
+.si-lagna{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:14px;height:14px;
+  background:rgba(201,150,59,.3);
+  border:1px solid rgba(201,150,59,.5);
+  border-radius:2px;
+  font-size:.48rem;
+  color:var(--gl);
+  font-family:Cinzel,serif;
+  flex-shrink:0;
+}
+.si-planets{
+  display:flex;flex-wrap:wrap;
+  align-items:center;justify-content:center;
+  gap:3px;padding-top:2px;
+}
+.si-glyph{
+  font-size:1.05rem;
+  color:var(--gl);
+  line-height:1;
+  text-shadow:0 0 8px rgba(201,150,59,.4);
+}
+.si-ctr-label{
+  font-family:Cinzel,serif;font-size:.5rem;
+  color:rgba(201,150,59,.4);letter-spacing:.1em;
+}
+.si-ctr-asc{
+  font-family:Cinzel,serif;font-size:.85rem;
+  color:var(--gold);font-weight:500;text-align:center;
+}
+.si-ctr-sub{
+  font-size:.6rem;color:rgba(201,150,59,.5);
+  font-style:italic;
+}
+.si-info{
+  display:flex;flex-wrap:wrap;gap:.4rem 1rem;
+  justify-content:center;
+  font-size:.7rem;color:var(--sw);
+  font-style:italic;margin-top:.4rem;
+}
+.si-info strong{color:var(--gl);font-style:normal;}
+@media(max-width:400px){
+  .si-glyph{font-size:.9rem}
+  .si-sign{font-size:.5rem}
+  .si-ctr-asc{font-size:.75rem}
+}</style>
 </head>
 <body>
 <div id="stars"></div>
@@ -1235,54 +1310,81 @@ async function speakKundli(){
 }
 function renderKundliGrid(chart){
   const isNew=chart.planets&&chart.planets[0]&&chart.planets[0].name!==undefined;
+
+  // Build sign → glyphs map
   const bySi={};
-  chart.planets.forEach(p=>{
-    const si=isNew?p.sign_idx:p.si;
-    const g=isNew?p.glyph:p.g;
+  (chart.planets||[]).forEach(p=>{
+    const si=isNew?p.sign_idx:(p.si||0);
+    const g=isNew?p.glyph:(p.g||'');
     const retro=isNew&&p.retrograde;
     if(!bySi[si])bySi[si]=[];
     bySi[si].push(g+(retro?'\u1d3f':''));
   });
-  const ascSi=isNew?chart.asc_sign_idx:(chart.asc||0);
-  const ascSkt=isNew?chart.asc_sign_skt:(chart.ascSkt||'');
-  const ascSign=isNew?chart.asc_sign:(chart.ascSign||'');
-  const moonNak=isNew?chart.moon_nakshatra:(chart.moonNak||'');
-  const ascDeg=isNew?chart.asc_degree:null;
-  const ayan=isNew?chart.ayanamsa:null;
 
-  // South Indian chart: 4x4 grid, fixed sign positions
-  const SIG=[[11,0,1,2],[10,-1,-1,3],[9,-1,-1,4],[8,7,6,5]];
+  const ascSi  =isNew?chart.asc_sign_idx:(chart.asc||0);
+  const ascSkt =isNew?chart.asc_sign_skt:(chart.ascSkt||SSKT[ascSi]);
+  const ascSign=isNew?chart.asc_sign:(chart.ascSign||SIGNS[ascSi]);
+  const ascDeg =isNew?chart.asc_degree:null;
+  const moonNak=isNew?chart.moon_nakshatra:(chart.moonNak||'');
+  const ayan   =isNew?chart.ayanamsa:null;
+
+  // South Indian fixed sign grid (sign indices 0=Aries..11=Pisces)
+  // Row 0: Pisces(11) Aries(0)  Taurus(1)  Gemini(2)
+  // Row 1: Aquarius(10)  [inner]            Cancer(3)
+  // Row 2: Capricorn(9)  [inner]            Leo(4)
+  // Row 3: Sagittarius(8) Scorpio(7) Libra(6) Virgo(5)
+  const GRID=[
+    [11,0,1,2],
+    [10,-1,-1,3],
+    [9,-1,-1,4],
+    [8,7,6,5]
+  ];
   const SK=['Mesha','Vrishabha','Mithuna','Karka','Simha','Kanya','Tula','Vrishchika','Dhanu','Makara','Kumbha','Meena'];
 
+  // Build the 16-cell grid with explicit placement
+  // Cells: 12 sign cells + 1 centre span (2x2) + 3 hidden placeholders
   let html='<div class="si-chart">';
-  for(let row=0;row<4;row++){
-    for(let col=0;col<4;col++){
-      const si=SIG[row][col];
+
+  for(let r=0;r<4;r++){
+    for(let cc=0;cc<4;cc++){
+      const si=GRID[r][cc];
+      const gridPos='grid-column:'+(cc+1)+';grid-row:'+(r+1)+';';
+
       if(si===-1){
-        if(row===1&&col===1){
-          const degStr=ascDeg!==null?'<div class="si-ctr-deg">'+ascDeg.toFixed(2)+'\u00b0</div>':'';
-          html+='<div class="si-cell si-inner">'
+        if(r===1&&cc===1){
+          // Centre 2x2 cell
+          const degStr=ascDeg!==null?' '+ascDeg.toFixed(1)+'\u00b0':'';
+          html+='<div class="si-cell si-inner" style="grid-column:2/4;grid-row:2/4;">'
             +'<div class="si-ctr-label">KUNDLI</div>'
-            +'<div class="si-ctr-asc">'+ascSkt+'</div>'
-            +degStr+'</div>';
+            +'<div class="si-ctr-asc">'+ascSkt+degStr+'</div>'
+            +'<div class="si-ctr-sub">'+ascSign+'</div>'
+            +'</div>';
         }
+        // Skip other inner cells — already covered by the span
         continue;
       }
+
       const isAsc=(si===ascSi);
-      const planets=(bySi[si]||[]).join(' ');
-      const lmark=isAsc?'<span class="si-asc-marker">L</span>':'';
-      html+='<div class="si-cell'+(isAsc?' si-asc':'')+'">'
-        +'<div class="si-sign">'+lmark+SK[si]+'</div>'
-        +'<div class="si-planets">'+planets+'</div>'
+      const glyphs=bySi[si]||[];
+      const planetHtml=glyphs.length
+        ?glyphs.map(g=>'<span class="si-glyph">'+g+'</span>').join('')
+        :'';
+
+      html+='<div class="si-cell'+(isAsc?' si-asc':'')+'" style="'+gridPos+'">'
+        +'<div class="si-sign">'+(isAsc?'<span class="si-lagna">L</span>':'')+SK[si]+'</div>'
+        +(planetHtml?'<div class="si-planets">'+planetHtml+'</div>':'')
         +'</div>';
     }
   }
   html+='</div>';
+
+  // Info bar
   html+='<div class="si-info">'
-    +'<span>Lagna: '+ascSign+(ascDeg!==null?' '+ascDeg.toFixed(2)+'\u00b0':'')+'</span>'
-    +'<span>Moon Nak: '+moonNak+'</span>'
-    +(ayan?'<span>Ayanamsa: '+ayan+'\u00b0</span>':'')
+    +'<span>Lagna: <strong>'+ascSign+(ascDeg!==null?' '+ascDeg.toFixed(2)+'\u00b0':'')+'</strong></span>'
+    +'<span>\u263d '+moonNak+'</span>'
+    +(ayan?'<span style="opacity:.6">Lahiri '+ayan+'\u00b0</span>':'')
     +'</div>';
+
   document.getElementById('kundliOut').innerHTML=html;
 }
 function renderPlanetTable(chart){
