@@ -808,9 +808,22 @@ async function genKundli(){
   const hourIst = h + min/60;
   
   try {
+    // Timezone offsets for common locations
+    const TZ_OFFSETS = {
+      'India':5.5,'IN':5.5,'Sri Lanka':5.5,'Nepal':5.75,'Bangladesh':6,
+      'Pakistan':5,'UAE':4,'Dubai':4,'Singapore':8,'Malaysia':8,
+      'UK':0,'London':0,'US':-5,'USA':-5,'Australia':10,'Sydney':11,
+      'Canada':-5,'Toronto':-5,'Germany':1,'France':1,'Japan':9,
+    };
+    const tzKey = Object.keys(TZ_OFFSETS).find(k=>
+      S.country.toLowerCase().includes(k.toLowerCase()) ||
+      S.city.toLowerCase().includes(k.toLowerCase())
+    );
+    const tz = tzKey ? TZ_OFFSETS[tzKey] : 5.5; // default IST
+
     const r = await fetch('/.netlify/functions/kundli',{
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({year:y,month:mo,day:d,hour_ist:hourIst,lat:coords.lat,lon:coords.lon})
+      body: JSON.stringify({year:y,month:mo,day:d,hour_ist:hourIst,lat:coords.lat,lon:coords.lon,timezone_offset:tz})
     });
     if(!r.ok) throw new Error('Kundli function error: '+r.status);
     const chart = await r.json();
@@ -837,9 +850,17 @@ async function genKundli(){
   }
 }
 async function speakKundli(){
-  if(!S.chartData)genKundli();
-  const c=S.chartData;
-  await speak(`Your Vedic birth chart shows ${S.name||'you'} with ${c.ascSign} ascendant, Moon in ${SIGNS[c.planets[1].si]}, the ${c.moonNak} nakshatra, and Sun in ${SIGNS[c.planets[0].si]}. Jupiter resides in ${SIGNS[c.planets[4].si]}, shaping your wisdom and expansion.`);
+  if(!S.chartData){await genKundli();return;}
+  const ch=S.chartData;
+  const isNew=ch.asc_sign!==undefined;
+  const ascSign=isNew?ch.asc_sign:ch.ascSign;
+  const moonSign=isNew?ch.planets.find(p=>p.name==='Moon')?.sign:'unknown';
+  const moonNak=isNew?ch.moon_nakshatra:ch.moonNak;
+  const sunSign=isNew?ch.planets.find(p=>p.name==='Sun')?.sign:'unknown';
+  const jupSign=isNew?ch.planets.find(p=>p.name==='Jupiter')?.sign:'unknown';
+  const ascDeg=isNew?ch.asc_degree:'';
+  const ayan=isNew?ch.ayanamsa:'';
+  await speak(`${S.name||'Your'} Vedic birth chart has ${ascSign} rising as the Lagna${ascDeg?' at '+ascDeg+' degrees':''}. The Moon rests in ${moonSign}, in the ${moonNak} nakshatra, which governs your mind and emotions. The Sun illuminates ${sunSign}, and Jupiter graces ${jupSign}. ${ayan?'The Lahiri ayanamsa used is '+ayan+' degrees.':''}`);
 }
 function renderKundliGrid(chart){
   // Support both old and new format
