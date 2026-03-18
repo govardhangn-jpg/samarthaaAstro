@@ -1666,34 +1666,150 @@ async function genShadbala(doSpeak){
 
 // Muhurta
 async function genMuhurta(doSpeak){
-  const de=document.getElementById('muhurtaDate');if(!de.value)de.value=new Date().toISOString().split('T')[0];
-  const date=de.value;const type=document.getElementById('muhurtaType').value;
+  const de=document.getElementById('muhurtaDate');
+  if(!de.value) de.value=new Date().toISOString().split('T')[0];
+  const date=de.value;
+  const type=document.getElementById('muhurtaType').value;
   document.getElementById('muhurtaOut').innerHTML='<div class="typing" style="padding:.4rem 0"><span></span><span></span><span></span></div>';
+
   const cf=S.chartData?chartField(S.chartData):null;
-  // Get today's moon nakshatra via transit function
-  let moonNakToday='';
-  try{
-    const tr=await fetch('/.netlify/functions/transit',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({date_str:date,natal_asc_si:cf?.ascSi||0,natal_moon_si:cf?.moonSi||0,natal_planet_signs:cf?.allPlanetSigns||{}})});
-    const td=await tr.json();
-    moonNakToday=td.panchanga?.moon_nakshatra||'';
-  }catch(e){}
-  const chartCtx=cf?('Personal chart: Asc '+cf.ascSign+', Moon '+cf.moonSign+' ('+cf.moonNak+').'):'No personal chart.';
-  const prompt='Muhurta auspicious timing for: "'+type+'" on '+date+'. '+chartCtx+(moonNakToday?' Moon today in '+moonNakToday+' nakshatra.':'')+' Return ONLY valid JSON array (6 time slots, no markdown): [{"time":"6:00 AM - 7:30 AM","quality":"good","name":"Brahma Muhurta","body":"Why auspicious for this purpose"},{"time":"9:00 AM - 10:30 AM","quality":"neutral","name":"..","body":".."},{"time":"11:00 AM - 12:30 PM","quality":"bad","name":"Rahu Kaal","body":".."},{"time":"2:00 PM - 3:30 PM","quality":"good","name":"..","body":".."},{"time":"4:30 PM - 6:00 PM","quality":"neutral","name":"..","body":".."},{"time":"7:00 PM - 8:30 PM","quality":"good","name":"..","body":".."}]';
-  try{
-    const r=await fetch('/.netlify/functions/claude',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,system:'Respond ONLY with valid JSON array. No markdown, no backticks.',messages:[{role:'user',content:prompt}]})});
-    const d=await r.json();let txt=d.content?.[0]?.text||'[]';txt=txt.replace(/```json|```/g,'').trim();
-    let mu;try{mu=JSON.parse(txt)}catch(e){mu=null}
-    if(!mu||!mu.length){document.getElementById('muhurtaOut').innerHTML='<p class="csubtitle">Parse error. Try again.</p>';return}
-    let html='',best=null;
-    mu.forEach(m=>{
-      html+='<div class="muhurta-slot"><div class="ms-quality '+m.quality+'"></div><div class="ms-time">'+(m.time.split(' - ')[0])+'</div><div class="ms-info"><div class="ms-name">'+m.name+'</div><div class="ms-body">'+m.body+'</div></div></div>';
-      if(m.quality==='good'&&!best)best=m;
+
+  // ── Classical Vedic Muhurta Calculation (no AI needed for slots) ──────────
+  // Choghadiya by weekday (0=Sun..6=Sat), each slot = 90 min from sunrise (~6 AM)
+  const CHOG_DAY={
+    0:['Udveg','Char','Labh','Amrit','Kaal','Shubh','Rog','Udveg'],
+    1:['Amrit','Kaal','Shubh','Rog','Udveg','Char','Labh','Amrit'],
+    2:['Rog','Udveg','Char','Labh','Amrit','Kaal','Shubh','Rog'],
+    3:['Labh','Amrit','Kaal','Shubh','Rog','Udveg','Char','Labh'],
+    4:['Shubh','Rog','Udveg','Char','Labh','Amrit','Kaal','Shubh'],
+    5:['Char','Labh','Amrit','Kaal','Shubh','Rog','Udveg','Char'],
+    6:['Kaal','Shubh','Rog','Udveg','Char','Labh','Amrit','Kaal']
+  };
+  const CHOG_Q={Amrit:'excellent',Shubh:'good',Labh:'good',Char:'neutral',Udveg:'bad',Kaal:'bad',Rog:'bad'};
+  const CHOG_M={
+    Amrit:'Divine nectar \u2014 supremely auspicious for all works',
+    Shubh:'Auspicious \u2014 favourable for most activities',
+    Labh:'Profit \u2014 excellent for business, trade, financial gains',
+    Char:'Moving \u2014 good for travel, journeys, change of place',
+    Udveg:'Anxiety \u2014 avoid all important new beginnings',
+    Kaal:'Inauspicious \u2014 avoid; only suitable for adversarial tasks',
+    Rog:'Disease \u2014 inauspicious for auspicious starts'
+  };
+  // Rahu Kaal by weekday (approximate IST, sunrise 6 AM)
+  const RAHU=['4:30 PM - 6:00 PM','7:30 AM - 9:00 AM','3:00 PM - 4:30 PM',
+              '12:00 PM - 1:30 PM','1:30 PM - 3:00 PM','10:30 AM - 12:00 PM','9:00 AM - 10:30 AM'];
+  // Purpose-specific auspicious choghadiya
+  const PURPOSE_BEST={
+    business:['Labh','Amrit','Shubh'],travel:['Char','Amrit','Labh'],
+    marriage:['Amrit','Shubh','Labh'],medical:['Amrit','Shubh'],
+    education:['Labh','Amrit','Shubh'],property:['Amrit','Labh','Shubh'],
+    investment:['Labh','Amrit'],vehicle:['Amrit','Shubh','Char']
+  };
+
+  // Get weekday (0=Sun) from date string
+  const dt=new Date(date+'T12:00:00');
+  const dow=dt.getDay(); // 0=Sun..6=Sat
+
+  // Build slots
+  const chogs=CHOG_DAY[dow]||CHOG_DAY[0];
+  const rahu=RAHU[dow];
+  const bestChogs=(PURPOSE_BEST[type]||['Amrit','Shubh','Labh']);
+  const sunrise_mins=6*60; // 6:00 AM
+
+  function fmtTime(mins){
+    const h=Math.floor(mins/60),m=mins%60;
+    const suf=h<12?'AM':'PM',h12=h%12||12;
+    return h12+':'+(m<10?'0':'')+m+' '+suf;
+  }
+
+  let slots=[];
+  chogs.forEach((chog,i)=>{
+    const start=sunrise_mins+i*90;
+    const end=start+90;
+    const purposeBoost=bestChogs.includes(chog);
+    slots.push({
+      time:fmtTime(start)+' \u2013 '+fmtTime(end),
+      name:chog+' Choghadiya',
+      quality:CHOG_Q[chog]==='excellent'?'excellent':purposeBoost&&CHOG_Q[chog]==='good'?'best':CHOG_Q[chog],
+      meaning:CHOG_M[chog],
+      chog,purposeBoost
     });
-    document.getElementById('muhurtaOut').innerHTML=html;
-    if(doSpeak&&best)speak('The best Muhurta for '+type+' on '+date+' is '+best.name+' at '+best.time+'. '+best.body);
-  }catch(e){document.getElementById('muhurtaOut').innerHTML='<p class="csubtitle">Error: '+e.message+'</p>';console.error('muhurta error:',e)}
+  });
+
+  // Add Abhijit Muhurta (not on Tuesday)
+  if(dow!==2){
+    slots.push({time:'12:00 PM \u2013 12:48 PM',name:'Abhijit Muhurta \u2605',
+      quality:'excellent',meaning:'Midday crown jewel \u2014 powerful for all new beginnings. Always auspicious except Tuesday.',chog:'Amrit',purposeBoost:true});
+  }
+
+  // Mark Rahu Kaal
+  slots.push({time:rahu,name:'Rahu Kaal \u26A0',
+    quality:'bad',meaning:'Dragon\u2019s period \u2014 strictly avoid for all auspicious activities.',chog:'Rog',purposeBoost:false});
+
+  // Sort by start time
+  slots.sort((a,b)=>{
+    const parse=t=>{const[tm,ap]=t.split(' \u2013 ')[0].split(' ');const[h,m]=tm.split(':').map(Number);return(h%12+(ap==='PM'?12:0))*60+m};
+    return parse(a.time)-parse(b.time);
+  });
+
+  // Render
+  const qColor={excellent:'rgba(76,200,133,.8)',best:'rgba(76,200,133,.65)',good:'rgba(201,150,59,.8)',neutral:'rgba(150,150,200,.6)',bad:'rgba(220,80,80,.7)'};
+  const qLabel={excellent:'Excellent',best:'Best for purpose',good:'Good',neutral:'Neutral',bad:'Avoid'};
+  const days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+  let html='<div style="font-size:.72rem;color:var(--sw);font-family:Space Mono,monospace;margin-bottom:.7rem;padding:.4rem .6rem;background:rgba(255,255,255,.03);border-radius:7px">'
+    +days[dow]+' \u2022 Rahu Kaal: '+rahu
+    +(dow===2?' \u2022 No Abhijit Muhurta (Tuesday)':'')
+    +'</div>';
+
+  let best=null;
+  slots.forEach(s=>{
+    const col=qColor[s.quality]||qColor.neutral;
+    const lbl=qLabel[s.quality]||s.quality;
+    const isGood=['excellent','best','good'].includes(s.quality);
+    if(isGood&&!best) best=s;
+    html+='<div style="display:flex;align-items:flex-start;gap:.7rem;padding:.5rem .6rem;margin-bottom:.35rem;border-radius:8px;border:1px solid '
+      +col.replace('.8','.2').replace('.65','.18').replace('.6','.15').replace('.7','.2')+';background:'+col.replace('.8','.06').replace('.65','.05').replace('.6','.04').replace('.7','.06')+'">'
+      +'<div style="min-width:10px;width:10px;height:10px;border-radius:50%;background:'+col+';margin-top:3px;flex-shrink:0"></div>'
+      +'<div style="flex:1">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.3rem">'
+      +'<div style="font-family:Cinzel,serif;font-size:.78rem;color:var(--gl)">'+s.name+'</div>'
+      +'<div style="font-family:Space Mono,monospace;font-size:.68rem;color:'+col+'">'+lbl+'</div>'
+      +'</div>'
+      +'<div style="font-size:.72rem;color:var(--sw);font-family:Space Mono,monospace;margin:.15rem 0">'+s.time+'</div>'
+      +'<div style="font-size:.75rem;color:var(--iv)">'+s.meaning+'</div>'
+      +'</div></div>';
+  });
+
+  document.getElementById('muhurtaOut').innerHTML=html;
+
+  // AI narrative for best time + purpose advice (non-critical)
+  if(best){
+    const purposeLabels={business:'starting a business or signing contracts',travel:'travel and journeys',
+      marriage:'marriage and engagement',medical:'medical treatments',
+      education:'beginning studies',property:'property purchase',
+      investment:'financial investments',vehicle:'vehicle purchase'};
+    const purposeLabel=purposeLabels[type]||type;
+    const chartCtx=cf?('Natal chart: Asc '+cf.ascSign+', Moon '+cf.moonSign+'.'):'';
+    const moonCtx=''; // We have transit data from panchanga
+    const aiPrompt='Brief Muhurta advice for '+purposeLabel+' on '+days[dow]+', '+date+'. Best slot: '+best.name+' at '+best.time+'. '+chartCtx+' In 120 words: why this time is auspicious for this specific purpose, what to do at the start of the Muhurta (facing direction, prayer, item to hold), and one mantra. Pure prose.';
+
+    try{
+      const r=await fetch('/.netlify/functions/claude',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:400,
+          system:'You are Samarthaa, a Vedic astrologer. Pure prose, no markdown, no bullets, no lists.',
+          messages:[{role:'user',content:aiPrompt}]})});
+      const d=await r.json();
+      const txt=d.content?.[0]?.text||'';
+      if(txt){
+        document.getElementById('muhurtaOut').innerHTML+=
+          '<div class="ibox amber" style="margin-top:.6rem"><div class="ibox-title">SAMARTHAA\'S GUIDANCE</div>'
+          +'<p style="font-size:.85rem;line-height:1.7;color:var(--iv);font-style:italic">'+txt+'</p></div>';
+      }
+    }catch(e){console.warn('Muhurta AI error:',e)}
+
+    if(doSpeak) speak('The best Muhurta for '+purposeLabel+' is '+best.name+' from '+best.time+'. '+best.meaning);
+  }
 }
 
 // Consolidated Prediction — THE CROWN FEATURE
