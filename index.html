@@ -745,15 +745,57 @@ function addTyping(){
   w.appendChild(d);w.scrollTop=w.scrollHeight;
 }
 async function sendMsg(){
-  const inp=document.getElementById('userInput'),q=inp.value.trim();if(!q)return;inp.value='';
-  addMsg('user',q);S.chatHistory.push({role:'user',content:q});setVS('thinking');addTyping();
+  const inp=document.getElementById('userInput'),q=inp.value.trim();
+  if(!q)return;
+  inp.value='';
+  addMsg('user',q);
+  S.chatHistory.push({role:'user',content:q});
+  setVS('thinking');addTyping();
   try{
-    const r=await fetch('/.netlify/functions/claude',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:900,system:buildSys(),messages:S.chatHistory.slice(-14)})});
-    const d=await r.json();const ans=d.content?.[0]?.text||'The stars are silent. Please try again.';
-    document.getElementById('typing')?.remove();addMsg('oracle',ans);S.chatHistory.push({role:'assistant',content:ans});
+    const sys=buildSys();
+    const r=await fetch('/.netlify/functions/claude',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:600,
+        system:sys,
+        messages:S.chatHistory.slice(-12)
+      })
+    });
+    const d=await r.json();
+    // Handle API-level errors (e.g. missing API key, quota exceeded)
+    if(d.error){
+      const errMsg=d.error.message||'API error';
+      document.getElementById('typing')?.remove();
+      // Friendly message for common errors
+      if(errMsg.includes('API key')||errMsg.includes('authentication')){
+        addMsg('oracle','The oracle key is missing. Please set ANTHROPIC_API_KEY in Netlify environment variables.');
+      } else if(errMsg.includes('overloaded')||errMsg.includes('rate')){
+        addMsg('oracle','The stars are momentarily crowded. Please try again in a moment.');
+      } else {
+        addMsg('oracle','The oracle encountered an issue: '+errMsg+'. Please try again.');
+      }
+      setVS('idle');
+      return;
+    }
+    const ans=d.content?.[0]?.text;
+    if(!ans){
+      document.getElementById('typing')?.remove();
+      addMsg('oracle','The stars are silent. Please try again.');
+      setVS('idle');
+      return;
+    }
+    document.getElementById('typing')?.remove();
+    addMsg('oracle',ans);
+    S.chatHistory.push({role:'assistant',content:ans});
+    setVS('idle');
     if(voiceTriggered){voiceTriggered=false;await speak(ans);}
-  }catch(e){document.getElementById('typing')?.remove();addMsg('oracle','Error: '+e.message+'. Check your internet and try again.');setVS('idle');console.error('oracle error:',e)}
+  }catch(e){
+    document.getElementById('typing')?.remove();
+    addMsg('oracle','Connection error: '+e.message+'. Check your internet connection and try again.');
+    setVS('idle');
+    console.error('oracle error:',e);
+  }
 }
 
 // ── Chart field normaliser (supports old & new format) ──────────────────────
@@ -784,42 +826,55 @@ function chartField(chart){
 }
 
 function buildSys(){
-  const sm={
-    modern:'Blend traditional Vedic wisdom with clear accessible language.',
-    traditional:'Use Sanskrit Vedic terminology throughout — Rashi, Nakshatra, Graha, Bhava, Yoga, Dasha.',
-    spiritual:'Speak from a deeply spiritual, devotional perspective. Reference karma, dharma, the soul journey.',
-    practical:'Focus on practical actionable life guidance — career, relationships, health, wealth.'
-  };
-  const birth=S.dob
-    ?('Seeker: '+S.name+', born '+S.dob+' at '+S.tob+' in '+S.city+', '+S.country+'.')
-    :'No birth details provided yet.';
-  let chartCtx='';
-  if(S.chartData){
-    const cf=chartField(S.chartData);
-    const allP=S.chartData.planets.map(p=>{
-      const name=p.name||p.n, si=p.sign_idx!==undefined?p.sign_idx:p.si;
-      const h=p.house||p.h, deg=p.degree||0;
-      const retro=p.retrograde?' (R)':'';
-      const dignity=p.dignity?(' '+p.dignity):'';
-      return name+' in '+SIGNS[si]+' H'+h+' '+deg.toFixed(1)+'°'+retro+dignity;
-    }).join('; ');
-    const dashaCtx=S.dashaData
-      ?('Current Dasha: '+S.dashaData.current_maha+' Mahadasha'+(S.dashaData.current_antar?' / '+S.dashaData.current_antar+' Antardasha':'')+'.')
-      :'';
-    const ashtakCtx=S.ashtakScores
-      ?('Ashtakavarga sarva H1-H12: '+S.ashtakScores.join(',')+'. Strong: '+S.ashtakScores.map((s,i)=>s>=30?'H'+(i+1):null).filter(Boolean).join(',')+'. Weak: '+S.ashtakScores.map((s,i)=>s<=24?'H'+(i+1):null).filter(Boolean).join(',')+'.')
-      :'';
-    chartCtx='Ascendant: '+cf.ascSign+' '+cf.ascDeg.toFixed(1)+'°. Moon: '+cf.moonSign+' ('+cf.moonNak+'). '
-      +'Planets: '+allP+'. '
-      +dashaCtx+' '
-      +ashtakCtx;
+  try{
+    const sm={
+      modern:'Blend traditional Vedic wisdom with clear accessible language.',
+      traditional:'Use Sanskrit Vedic terminology throughout — Rashi, Nakshatra, Graha, Bhava, Yoga, Dasha.',
+      spiritual:'Speak from a deeply spiritual, devotional perspective. Reference karma, dharma, the soul journey.',
+      practical:'Focus on practical actionable life guidance — career, relationships, health, wealth.'
+    };
+    const birth=S.dob
+      ?('Seeker: '+(S.name||'Unknown')+', born '+S.dob+' at '+(S.tob||'06:00')+' in '+(S.city||'India')+', '+(S.country||'India')+'.')
+      :'No birth details provided yet.';
+    let chartCtx='';
+    if(S.chartData){
+      try{
+        const cf=chartField(S.chartData);
+        const allP=(S.chartData.planets||[]).map(p=>{
+          try{
+            const name=p.name||p.n||'?';
+            const si=p.sign_idx!==undefined?p.sign_idx:(p.si||0);
+            const h=p.house!==undefined?p.house:(p.h||0);
+            const deg=typeof p.degree==='number'?p.degree:(typeof p.deg==='number'?p.deg:0);
+            const retro=p.retrograde?' (R)':'';
+            const dignity=p.dignity?(' '+p.dignity):'';
+            return name+' in '+(SIGNS[si]||'?')+' H'+h+' '+deg.toFixed(1)+'\u00b0'+retro+dignity;
+          }catch(e2){return ''}
+        }).filter(Boolean).join('; ');
+        const dashaCtx=S.dashaData
+          ?('Current Dasha: '+S.dashaData.current_maha+' Mahadasha'+(S.dashaData.current_antar?' / '+S.dashaData.current_antar+' Antardasha':'')+'.')
+          :'';
+        const ashtakCtx=S.ashtakScores
+          ?('Ashtakavarga H1-H12: '+S.ashtakScores.join(',')+'. Strong: '+S.ashtakScores.map((s,i)=>s>=30?'H'+(i+1):null).filter(Boolean).join(',')+'. Weak: '+S.ashtakScores.map((s,i)=>s<=24?'H'+(i+1):null).filter(Boolean).join(',')+'.')
+          :'';
+        if(cf&&cf.ascSign){
+          chartCtx='Ascendant: '+cf.ascSign+(cf.ascDeg?' '+cf.ascDeg.toFixed(1)+'\u00b0':'')+'. Moon: '+cf.moonSign+' ('+cf.moonNak+'). '
+            +(allP?'Planets: '+allP+'. ':'')
+            +(dashaCtx?dashaCtx+' ':'')
+            +(ashtakCtx?ashtakCtx:'');
+        }
+      }catch(e2){console.warn('buildSys chart error:',e2)}
+    }
+    return 'You are Samarthaa, a wise compassionate Vedic Jyotishi. '+(sm[S.style||'modern']||sm.modern)+' '
+      +birth+' '
+      +(chartCtx?chartCtx+' ':'')
+      +'Rules: Answer only Vedic astrology questions. Warm, insightful, encouraging. '
+      +'Max 180 words. Pure prose, no markdown, no bullets. '
+      +'Suggest mantras, gemstones, remedies when apt. Free will is paramount.';
+  }catch(e){
+    console.error('buildSys error:',e);
+    return 'You are Samarthaa, a wise Vedic astrologer. Answer questions warmly and helpfully in 180 words or less. Pure prose, no markdown.';
   }
-  return 'You are Samarthaa, a wise compassionate Vedic Jyotishi. '+sm[S.style||'modern']+' '
-    +birth+' '
-    +(chartCtx?chartCtx+' ':'')
-    +'Rules: Answer only Vedic astrology questions. Warm, insightful, encouraging. '
-    +'Max 180 words. Pure prose — no markdown, no bullets. '
-    +'Suggest mantras, gemstones, remedies when apt. Free will is paramount — planets guide, not dictate.';
 }
 
 // Chart builder
