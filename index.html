@@ -377,7 +377,43 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
   .si-glyph{font-size:.9rem}
   .si-sign{font-size:.5rem}
   .si-ctr-asc{font-size:.75rem}
-}</style>
+}
+/* ── Message listen button ── */
+.msg-listen-btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:24px;height:24px;border-radius:50%;
+  border:1px solid rgba(201,150,59,.3);
+  background:rgba(201,150,59,.08);
+  color:rgba(201,150,59,.7);
+  cursor:pointer;
+  margin-left:.5rem;
+  vertical-align:middle;
+  flex-shrink:0;
+  transition:all .18s;
+  opacity:.7;
+  position:relative;
+  top:2px;
+}
+.msg-listen-btn:hover{
+  border-color:rgba(201,150,59,.6);
+  background:rgba(201,150,59,.18);
+  color:var(--gold);
+  opacity:1;
+  transform:scale(1.1);
+}
+.msg-listen-btn.playing{
+  border-color:rgba(220,100,100,.6);
+  background:rgba(220,100,100,.15);
+  color:rgba(220,100,100,.9);
+  opacity:1;
+  animation:pulse-btn .9s ease-in-out infinite;
+}
+@keyframes pulse-btn{
+  0%,100%{box-shadow:0 0 0 0 rgba(220,100,100,.3)}
+  50%{box-shadow:0 0 0 5px rgba(220,100,100,0)}
+}
+
+</style>
 </head>
 <body>
 <div id="stars"></div>
@@ -1035,7 +1071,16 @@ async function speak(text){
 function stopSpeak(){
   speakAbort=true;
   voiceTriggered=false;
-  if(curAudio){curAudio.pause();try{URL.revokeObjectURL(curAudio._url)}catch(e){}curAudio=null}
+  if(curAudio){
+    try{curAudio.pause();URL.revokeObjectURL(curAudio._url||'');}catch(e){}
+    curAudio=null;
+  }
+  // Reset whichever listen button was active
+  if(activeListenId){
+    const btn=document.getElementById('listen-'+activeListenId);
+    if(btn) resetListenBtn(btn);
+    activeListenId=null;
+  }
   setVS('idle');
 }
 let SR=null,isRec=false;
@@ -1051,11 +1096,92 @@ function toggleMic(){unlockAudio();
   if(!isRec){voiceTriggered=true;SR.start();isRec=true;setVS('listening')}
   else{SR.stop();isRec=false;setVS('idle')}
 }
-function addMsg(role,text){
-  const w=document.getElementById('chatWrap'),em=document.getElementById('chatEmpty');if(em)em.remove();
-  const d=document.createElement('div');d.className=`msg ${role}`;
-  d.innerHTML=`<div class="av">${role==='oracle'?'☽':'✦'}</div><div class="bubble">${text}</div>`;
-  w.appendChild(d);w.scrollTop=w.scrollHeight;
+let msgCounter=0; // unique ID per message
+
+function addMsg(role, text){
+  const w=document.getElementById('chatWrap');
+  const em=document.getElementById('chatEmpty');
+  if(em) em.remove();
+
+  const id='msg-'+(++msgCounter);
+  const d=document.createElement('div');
+  d.className='msg '+role;
+  d.id=id;
+
+  if(role==='oracle'){
+    // Oracle bubble gets a listen button
+    d.innerHTML=
+      '<div class="av">&#x263d;</div>'
+      +'<div class="bubble">'
+      +text
+      +'<button class="msg-listen-btn" id="listen-'+id+'" '
+      +'onclick="speakMsg(\''+id+'\',this)" title="Listen">'
+      +'<svg width="13" height="13" viewBox="0 0 13 13" fill="none">'
+      +'<polygon points="2,2 11,6.5 2,11" fill="currentColor"/>'
+      +'</svg>'
+      +'</button>'
+      +'</div>';
+    // Store clean text for speaking
+    d.dataset.text=text.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
+  } else {
+    d.innerHTML=
+      '<div class="av">&#x2736;</div>'
+      +'<div class="bubble">'+text+'</div>';
+  }
+
+  w.appendChild(d);
+  w.scrollTop=w.scrollHeight;
+  return id;
+}
+
+// Track which message is currently playing
+let activeListenId=null;
+
+async function speakMsg(msgId, btn){
+  // If this button is already playing → stop
+  if(activeListenId===msgId){
+    stopSpeak();
+    return;
+  }
+  // Stop any currently playing message and reset its button
+  if(activeListenId){
+    const prevBtn=document.getElementById('listen-'+activeListenId);
+    if(prevBtn) resetListenBtn(prevBtn);
+    stopSpeak();
+    await new Promise(r=>setTimeout(r,80));
+  }
+  // Get text from the message element
+  const msgEl=document.getElementById(msgId);
+  if(!msgEl) return;
+  const text=msgEl.dataset.text||msgEl.querySelector('.bubble')?.innerText||'';
+  if(!text.trim()) return;
+
+  // Set button to playing state
+  activeListenId=msgId;
+  btn.classList.add('playing');
+  btn.title='Stop';
+  btn.innerHTML='<svg width="11" height="11" viewBox="0 0 11 11" fill="none">'
+    +'<rect x="1" y="1" width="4" height="9" rx="1" fill="currentColor"/>'
+    +'<rect x="6" y="1" width="4" height="9" rx="1" fill="currentColor"/>'
+    +'</svg>';
+
+  try{
+    await speak(text);
+  }finally{
+    if(activeListenId===msgId){
+      activeListenId=null;
+      resetListenBtn(btn);
+    }
+  }
+}
+
+function resetListenBtn(btn){
+  if(!btn) return;
+  btn.classList.remove('playing');
+  btn.title='Listen';
+  btn.innerHTML='<svg width="13" height="13" viewBox="0 0 13 13" fill="none">'
+    +'<polygon points="2,2 11,6.5 2,11" fill="currentColor"/>'
+    +'</svg>';
 }
 function addTyping(){
   const w=document.getElementById('chatWrap'),em=document.getElementById('chatEmpty');if(em)em.remove();
@@ -1106,10 +1232,15 @@ async function sendMsg(){
       return;
     }
     document.getElementById('typing')?.remove();
-    addMsg('oracle',ans);
+    const newMsgId=addMsg('oracle',ans);
     S.chatHistory.push({role:'assistant',content:ans});
     setVS('idle');
-    if(voiceTriggered){voiceTriggered=false;await speak(ans);}
+    if(voiceTriggered){
+      voiceTriggered=false;
+      // Auto-play: click the listen button of the new message
+      const newBtn=document.getElementById('listen-'+newMsgId);
+      if(newBtn) speakMsg(newMsgId, newBtn);
+    }
   }catch(e){
     document.getElementById('typing')?.remove();
     addMsg('oracle','Connection error: '+e.message+'. Check your internet connection and try again.');
