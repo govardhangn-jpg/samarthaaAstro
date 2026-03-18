@@ -624,7 +624,7 @@ function saveSettings(){
 }
 function testVoice(){
   const mod=document.getElementById('cfgMod');if(mod)S.model=mod.value;
-  speak('Om. I am Samarthaa, your Vedic oracle. The stars are aligned and I am ready to illuminate your path.');
+  speak('Om Namah Shivaya. I am Samarthaa, your Vedic astrology oracle. The light of the stars flows through me to illuminate your path.');
 }
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('on');setTimeout(()=>t.classList.remove('on'),3000)}
 
@@ -666,11 +666,18 @@ async function speakChunk(text){
 }
 
 let speakAbort=false;
+let voiceTriggered=false; // true only when mic or 🔊 button used
 async function speak(text){
-  if(!S.elKey||!S.voiceId){toast('Voice not configured');return}
-  speakAbort=false;
-  // Stop any currently playing audio
+  if(!S.elKey||!S.voiceId){
+    console.error('Voice not configured - elKey:',!!S.elKey,'voiceId:',!!S.voiceId);
+    toast('Voice not configured — check Setup');return
+  }
+  // Always stop & cancel any ongoing speech first
+  speakAbort=true;
   if(curAudio){curAudio.pause();try{URL.revokeObjectURL(curAudio._url)}catch(e){} curAudio=null}
+  // Small delay to let previous chunk loop exit
+  await new Promise(r=>setTimeout(r,80));
+  speakAbort=false;
   setVS('speaking');
   const chunks=chunkText(text);
   try{
@@ -693,6 +700,7 @@ async function speak(text){
 
 function stopSpeak(){
   speakAbort=true;
+  voiceTriggered=false;
   if(curAudio){curAudio.pause();try{URL.revokeObjectURL(curAudio._url)}catch(e){}curAudio=null}
   setVS('idle');
 }
@@ -700,13 +708,14 @@ let SR=null,isRec=false;
 if('webkitSpeechRecognition'in window||'SpeechRecognition'in window){
   const Rc=window.SpeechRecognition||window.webkitSpeechRecognition;
   SR=new Rc();SR.lang='en-IN';SR.continuous=false;SR.interimResults=false;
-  SR.onresult=e=>{const t=e.results[0][0].transcript;document.getElementById('userInput').value=t;isRec=false;setVS('thinking');setTimeout(sendMsg,200)};
+  SR.onresult=e=>{const t=e.results[0][0].transcript;document.getElementById('userInput').value=t;isRec=false;voiceTriggered=true;setVS('thinking');setTimeout(sendMsg,200)};
   SR.onerror=()=>{isRec=false;setVS('idle');toast('Voice not recognised — try again')};
   SR.onend=()=>{if(isRec){isRec=false;setVS('idle')}};
 }
 function toggleMic(){
   if(!SR){toast('Voice input: use Chrome or Edge');return}
-  if(!isRec){SR.start();isRec=true;setVS('listening')}else{SR.stop();isRec=false;setVS('idle')}
+  if(!isRec){voiceTriggered=true;SR.start();isRec=true;setVS('listening')}
+  else{SR.stop();isRec=false;setVS('idle')}
 }
 function addMsg(role,text){
   const w=document.getElementById('chatWrap'),em=document.getElementById('chatEmpty');if(em)em.remove();
@@ -727,7 +736,8 @@ async function sendMsg(){
     const r=await fetch('/.netlify/functions/claude',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:900,system:buildSys(),messages:S.chatHistory.slice(-14)})});
     const d=await r.json();const ans=d.content?.[0]?.text||'The stars are silent. Please try again.';
-    document.getElementById('typing')?.remove();addMsg('oracle',ans);S.chatHistory.push({role:'assistant',content:ans});await speak(ans);
+    document.getElementById('typing')?.remove();addMsg('oracle',ans);S.chatHistory.push({role:'assistant',content:ans});
+    if(voiceTriggered){voiceTriggered=false;await speak(ans);}
   }catch(e){document.getElementById('typing')?.remove();addMsg('oracle','The cosmos is veiled. Check your connection.');setVS('idle')}
 }
 function buildSys(){
@@ -902,7 +912,7 @@ function genDasha(doSpeak){
     cum=e;
   }
   document.getElementById('dashaOut').innerHTML=html;
-  if(doSpeak&&curName)speak(`You are in your ${curName} Mahadasha with ${curRem} years remaining. This planetary period shapes your life themes and karmic lessons.`);
+  if(doSpeak&&curName){speak(`You are in your ${curName} Mahadasha with ${curRem} years remaining. This planetary period shapes your life themes and karmic lessons.`);}
 }
 
 // Ashtakavarga
@@ -1029,8 +1039,8 @@ async function genNavamsa(doSpeak){
   if(!S.dob){toast('Enter birth details');return}
   if(!S.chartData)S.chartData=buildChart(S.dob,S.tob);
   const c=S.chartData;
-  const d9Planets=c.planets.map(p=>({...p,d9si:calcNavamsa(p.si),d9sign:SIGNS[calcNavamsa(p.si)],d9skt:SSKT[calcNavamsa(p.si)]}));
-  const d9asc=calcNavamsa(c.asc);
+  const d9Planets=S.chartData.planets.map(p=>({...p,d9si:calcNavamsa(p.si),d9sign:SIGNS[calcNavamsa(p.si)],d9skt:SSKT[calcNavamsa(p.si)]}));
+  const d9asc=calcNavamsa(S.chartData.asc);
   let html=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem;margin-bottom:.8rem">
   <div><div style="font-family:'Cinzel',serif;font-size:.66rem;color:var(--gold);letter-spacing:.07em;margin-bottom:.5rem">RASHI (D1)</div>
   <div style="overflow-x:auto"><table class="ptable"><thead><tr><th>Graha</th><th>D1 Sign</th></tr></thead><tbody>`;
@@ -1203,7 +1213,7 @@ Write as flowing prose. No bullets, no markdown. Speak as Samarthaa would — wa
       </div>
     </div>`;
     document.getElementById('predictOut').innerHTML=html;
-    if(doSpeak)speak(txt.substring(0,1400));
+    if(doSpeak)speak(txt);
   }catch(e){document.getElementById('predictOut').innerHTML='<div class="card"><p class="csubtitle">Error generating prediction. Try again.</p></div>'}
 }
 
