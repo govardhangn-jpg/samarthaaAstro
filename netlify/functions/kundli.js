@@ -28,7 +28,7 @@ function moonLon(jd){
   return n360(Lp+L/1000000)
 }
 function rahuLon(jd){const T=(jd-2451545)/36525;return n360(125.04452-1934.136261*T+.0020708*T*T+T*T*T/450000)}
-function ascLon(jd,lat,lon){const T=(jd-2451545)/36525,GMST=n360(280.46061837+360.98564736629*(jd-2451545)+.000387933*T*T),LST=n360(GMST+lon),eps=(23.439291111-.013004167*T)*RAD,latR=lat*RAD,lstR=LST*RAD;const tanAsc=-Math.cos(lstR)/(Math.sin(lstR)*Math.cos(eps)+Math.tan(latR)*Math.sin(eps));let asc=Math.atan(tanAsc)*DEG;if(Math.cos(lstR)>0)asc+=180;return n360(asc)}
+function ascLon(jd,lat,lon){const T=(jd-2451545)/36525,GMST=n360(280.46061837+360.98564736629*(jd-2451545)+.000387933*T*T),LST=n360(GMST+lon),eps=(23.439291111-.013004167*T)*RAD,latR=lat*RAD,lstR=LST*RAD;const num=-Math.cos(lstR),den=Math.sin(lstR)*Math.cos(eps)+Math.tan(latR)*Math.sin(eps);let asc=Math.atan(num/den)*DEG;if(den<0)asc+=180;asc+=180;return n360(asc)}
 function getNak(lon){const sp=360/27,idx=Math.floor(lon/sp)%27,pada=Math.floor((lon%sp)/(sp/4))+1;return{name:NAKS[idx],idx,pada,lord:NLORDS[idx]}}
 function dignity(name,si,deg){if(EXALT[name]&&si===EXALT[name].s)return Math.abs(deg-EXALT[name].d)<=3?'Exalted \u2605':'Exalted';if(DEBIL[name]&&si===DEBIL[name].s)return'Debilitated';if(OWN[name]&&OWN[name].includes(si))return'Own Sign';const mt={Sun:{s:4,f:0,t:20},Moon:{s:1,f:4,t:30},Mars:{s:0,f:0,t:12},Mercury:{s:5,f:15,t:20},Jupiter:{s:8,f:0,t:10},Venus:{s:6,f:0,t:15},Saturn:{s:9,f:0,t:20}};if(mt[name]&&si===mt[name].s&&deg>=mt[name].f&&deg<=mt[name].t)return'Mooltrikona';return'Neutral'}
 

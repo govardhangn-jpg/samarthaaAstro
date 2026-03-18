@@ -758,7 +758,7 @@ async function sendMsg(){
 function buildSys(){
   const sm={modern:'Blend Vedic wisdom with clear accessible language.',traditional:'Use Sanskrit Vedic terminology — Rashi, Nakshatra, Graha, Bhava, Yoga, Dasha.',spiritual:'Speak from a spiritual, devotional perspective. Reference karma, dharma, soul journey.',practical:'Focus on practical actionable life guidance — career, relationships, health, decisions.'};
   const birth=S.dob?`Seeker born ${S.dob} at ${S.tob} in ${S.city}, ${S.country}. Name: ${S.name}.`:'No birth details yet.';
-  const ch=S.chartData?`Chart: Asc ${S.chartData.ascSign}, Moon ${SIGNS[S.chartData.planets[1].si]} (${S.chartData.moonNak}).`:'';
+  const ch=S.chartData?(()=>{const cd=S.chartData;const isNew=cd.asc_sign!==undefined;const asc=isNew?cd.asc_sign:cd.ascSign;const moon=isNew?cd.planets.find(p=>p.name==='Moon'):cd.planets[1];const moonSign=isNew?moon.sign:SIGNS[moon.si];const moonNak=isNew?cd.moon_nakshatra:cd.moonNak;const ayan=isNew?cd.ayanamsa:'';return'Chart: Asc '+asc+', Moon '+moonSign+' ('+moonNak+')'+(ayan?', Ayanamsa '+ayan+'°':'');})():'';
   const ash=S.ashtakScores?`Ashtakavarga H1-H12: ${S.ashtakScores.join(',')}.`:'';
   return `You are Samarthaa, a wise compassionate Vedic astrologer. ${sm[S.style]||sm.modern}\n${birth} ${ch} ${ash}\nGuidelines: Answer Vedic astrology questions. Be warm, insightful, encouraging. Max 180 words. Pure prose only — no markdown, bullets. Suggest mantras, gemstones, remedies when relevant. Free will is paramount.`;
 }
@@ -1264,7 +1264,7 @@ async function genNavamsa(doSpeak){
   if(!S.chartData)S.chartData=buildChart(S.dob,S.tob);
   const c=S.chartData;
   const d9Planets=S.chartData.planets.map(p=>({...p,d9si:calcNavamsa(p.si),d9sign:SIGNS[calcNavamsa(p.si)],d9skt:SSKT[calcNavamsa(p.si)]}));
-  const d9asc=calcNavamsa(S.chartData.asc);
+  const d9asc=calcNavamsa(S.chartData.asc_sign_idx!==undefined?S.chartData.asc_sign_idx:(S.chartData.asc||0));
   let html=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem;margin-bottom:.8rem">
   <div><div style="font-family:'Cinzel',serif;font-size:.66rem;color:var(--gold);letter-spacing:.07em;margin-bottom:.5rem">RASHI (D1)</div>
   <div style="overflow-x:auto"><table class="ptable"><thead><tr><th>Graha</th><th>D1 Sign</th></tr></thead><tbody>`;
