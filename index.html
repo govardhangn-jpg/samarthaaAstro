@@ -677,7 +677,7 @@ async function sendMsg(){
   const inp=document.getElementById('userInput'),q=inp.value.trim();if(!q)return;inp.value='';
   addMsg('user',q);S.chatHistory.push({role:'user',content:q});setVS('thinking');addTyping();
   try{
-    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},
+    const r=await fetch('/.netlify/functions/claude',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:900,system:buildSys(),messages:S.chatHistory.slice(-14)})});
     const d=await r.json();const ans=d.content?.[0]?.text||'The stars are silent. Please try again.';
     document.getElementById('typing')?.remove();addMsg('oracle',ans);S.chatHistory.push({role:'assistant',content:ans});await speak(ans);
@@ -770,7 +770,7 @@ async function genHoroscope(doSpeak){
   const prompt=`Vedic daily horoscope for ${S.name||'the seeker'} on ${date}. Natal: Asc ${S.chartData.ascSign}, Moon ${SIGNS[S.chartData.planets[1].si]}, nakshatra ${S.chartData.moonNak}. Today: Sun ${SIGNS[tc.planets[0].si]}, Moon ${SIGNS[tc.planets[1].si]}, Jupiter ${SIGNS[tc.planets[4].si]}, Saturn ${SIGNS[tc.planets[6].si]}.
 Return ONLY valid JSON no markdown: {"overall":"2 sentences","lucky_number":7,"lucky_color":"Saffron","lucky_time":"9am-11am","sections":[{"title":"Health","body":"2 sentences","score":72},{"title":"Career","body":"2 sentences","score":68},{"title":"Love","body":"2 sentences","score":75},{"title":"Wealth","body":"2 sentences","score":65},{"title":"Spiritual","body":"2 sentences","score":80}],"remedy":"one remedy","mantra":"short mantra"}`;
   try{
-    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},
+    const r=await fetch('/.netlify/functions/claude',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,system:'Respond ONLY with valid JSON. No markdown.',messages:[{role:'user',content:prompt}]})});
     const d=await r.json();let txt=d.content?.[0]?.text||'{}';txt=txt.replace(/```json|```/g,'').trim();
     let h;try{h=JSON.parse(txt)}catch(e){h=null}
@@ -797,7 +797,7 @@ async function genTransits(doSpeak){
   const today=tc.planets.slice(0,7).map(p=>`${p.n} in ${SIGNS[p.si]}`).join(', ');
   const prompt=`Vedic transit analysis for ${S.name||'seeker'} today ${now.toDateString()}. Natal: ${natal}. Asc: ${S.chartData.ascSign}. Today: ${today}. Return ONLY valid JSON array no markdown: [{"planet":"Saturn","glyph":"♄","title":"short title","body":"2 sentences","date":"period active"},{"planet":"Jupiter","glyph":"♃","title":"..","body":"..","date":".."},{"planet":"Mars","glyph":"♂","title":"..","body":"..","date":".."},{"planet":"Venus","glyph":"♀","title":"..","body":"..","date":".."},{"planet":"Rahu","glyph":"☊","title":"..","body":"..","date":".."}]`;
   try{
-    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},
+    const r=await fetch('/.netlify/functions/claude',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,system:'Respond ONLY with valid JSON array. No markdown.',messages:[{role:'user',content:prompt}]})});
     const d=await r.json();let txt=d.content?.[0]?.text||'[]';txt=txt.replace(/```json|```/g,'').trim();
     let tr;try{tr=JSON.parse(txt)}catch(e){tr=null}
@@ -818,7 +818,7 @@ async function genSynastry(doSpeak){
   document.getElementById('compatOut').innerHTML='<div class="card"><div class="typing" style="padding:.4rem 0"><span></span><span></span><span></span></div></div>';
   const prompt=`Vedic compatibility for Person 1 (${S.name||'Seeker'}): Asc ${S.chartData.ascSign}, Moon ${SIGNS[S.chartData.planets[1].si]}, nakshatra ${S.chartData.moonNak}. Person 2 (${p2n}): Asc ${p2c.ascSign}, Moon ${SIGNS[p2c.planets[1].si]}, nakshatra ${p2c.moonNak}. Return ONLY valid JSON no markdown: {"score":72,"summary":"3 sentences","kutas":[{"name":"Varna","max":1,"score":1},{"name":"Vashya","max":2,"score":2},{"name":"Tara","max":3,"score":2},{"name":"Yoni","max":4,"score":3},{"name":"Graha Maitri","max":5,"score":4},{"name":"Gana","max":6,"score":5},{"name":"Bhakoot","max":7,"score":5},{"name":"Nadi","max":8,"score":7}],"strengths":"key strengths","challenges":"key challenges","verdict":"one sentence"}`;
   try{
-    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},
+    const r=await fetch('/.netlify/functions/claude',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:700,system:'Respond ONLY with valid JSON. No markdown.',messages:[{role:'user',content:prompt}]})});
     const d=await r.json();let txt=d.content?.[0]?.text||'{}';txt=txt.replace(/```json|```/g,'').trim();
     let co;try{co=JSON.parse(txt)}catch(e){co=null}
@@ -900,7 +900,7 @@ async function genAshtakAI(scores,strong,weak,doSpeak){
   const c=S.chartData;
   const prompt=`Ashtakavarga reading for ${S.name||'seeker'}. Asc: ${c.ascSign}. Moon Nakshatra: ${c.moonNak}. Sarvashtakavarga H1-H12: ${scores.join(',')}. Strong (28+): ${strong.join(',')||'none'}. Weak (24-): ${weak.join(',')||'none'}. Flowing prose interpretation 220 words — overall life strength, strong house gifts, weak house warnings with specific remedies, timing advice, one gemstone or mantra.`;
   try{
-    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},
+    const r=await fetch('/.netlify/functions/claude',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:900,system:'You are Samarthaa. Flowing prose only. No markdown, no bullets.',messages:[{role:'user',content:prompt}]})});
     const d=await r.json();const txt=d.content?.[0]?.text||'Reading unavailable.';
     document.getElementById('ashtakAI').innerHTML=`<p style="font-size:.88rem;line-height:1.7;color:var(--iv);font-style:italic">${txt}</p>`;
@@ -945,7 +945,7 @@ Shakuna: "${shakunaTxt}" — ${shakuna.desc}. Direction: ${dir} (${dq}).
 ${S.chartData?`Natal: Asc ${S.chartData.ascSign}, Moon ${SIGNS[S.chartData.planets[1].si]} (${S.chartData.moonNak}).`:''}
 Return ONLY valid JSON no markdown: {"verdict":"Yes","confidence":72,"verdict_class":"yes","short_answer":"direct 1 sentence","panchanga_analysis":"2-3 sentences","shakuna_reading":"2 sentences on omen for this question","timing":"specific timing","advice":"specific action","remedy":"specific remedy","full_reading":"4 sentence narrative"}`;
   try{
-    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},
+    const r=await fetch('/.netlify/functions/claude',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:900,system:'You are Samarthaa, masterful Prashna astrologer. Respond ONLY with valid JSON. No markdown.',messages:[{role:'user',content:prompt}]})});
     const d=await r.json();let txt=d.content?.[0]?.text||'{}';txt=txt.replace(/```json|```/g,'').trim();
     let pr;try{pr=JSON.parse(txt)}catch(e){pr=null}
@@ -1004,7 +1004,7 @@ async function genNavamsa(doSpeak){
   const vargottama=d9Planets.filter(p=>p.si===p.d9si).map(p=>p.n);
   const prompt=`Navamsa (D9) reading for ${S.name||'seeker'}. Natal Asc: ${c.ascSign}. Moon Nakshatra: ${c.moonNak}. Navamsa Asc: ${SIGNS[d9asc]}. Vargottama planets (same in D1+D9): ${vargottama.join(', ')||'none'}. D9 placements: ${d9Planets.slice(0,7).map(p=>`${p.n} in ${p.d9sign}`).join(', ')}. Write 220 words of flowing Navamsa interpretation: dharma and soul purpose, marriage and partnership destiny, spiritual gifts, vargottama planet significance, timing when D9 activates.`;
   try{
-    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},
+    const r=await fetch('/.netlify/functions/claude',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:900,system:'You are Samarthaa. Flowing prose only. No markdown.',messages:[{role:'user',content:prompt}]})});
     const d=await r.json();const txt=d.content?.[0]?.text||'Reading unavailable.';
     document.getElementById('navamsaAI').innerHTML=`<p style="font-size:.88rem;line-height:1.7;color:var(--iv);font-style:italic">${txt}</p>`;
@@ -1054,7 +1054,7 @@ async function genShadbala(doSpeak){
   const weak3=sorted.slice(-3).map(p=>p.n).join(', ');
   const prompt=`Shadbala reading for ${S.name||'seeker'}. Asc ${S.chartData.ascSign}. Planet strength scores: ${shad.map(p=>p.n+': '+p.total).join(', ')}. Strongest: ${top3}. Weakest: ${weak3}. Write 200 words: what strong planets deliver, how weak planets create vulnerabilities, remedies for weak planets, how this affects career, relationships, and health.`;
   try{
-    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},
+    const r=await fetch('/.netlify/functions/claude',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,system:'You are Samarthaa. Flowing prose only. No markdown.',messages:[{role:'user',content:prompt}]})});
     const d=await r.json();const txt=d.content?.[0]?.text||'Reading unavailable.';
     document.getElementById('shadAI').innerHTML=`<p style="font-size:.88rem;line-height:1.7;color:var(--iv);font-style:italic">${txt}</p>`;
@@ -1072,7 +1072,7 @@ async function genMuhurta(doSpeak){
 ${chart?`Personal chart: Asc ${chart.ascSign}, Moon ${SIGNS[chart.planets[1].si]}, nakshatra ${chart.moonNak}.`:'No personal chart available.'}
 Return ONLY valid JSON array (6 time slots, no markdown): [{"time":"6:00 AM - 7:30 AM","quality":"good","name":"Brahma Muhurta","body":"Why this time is auspicious for this purpose"},{"time":"9:00 AM - 10:30 AM","quality":"neutral","name":"..","body":".."},{"time":"11:00 AM - 12:30 PM","quality":"bad","name":"Rahu Kaal","body":".."},{"time":"2:00 PM - 3:30 PM","quality":"good","name":"..","body":".."},{"time":"4:30 PM - 6:00 PM","quality":"neutral","name":"..","body":".."},{"time":"7:00 PM - 8:30 PM","quality":"good","name":"..","body":".."}]`;
   try{
-    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},
+    const r=await fetch('/.netlify/functions/claude',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,system:'Respond ONLY with valid JSON array. No markdown.',messages:[{role:'user',content:prompt}]})});
     const d=await r.json();let txt=d.content?.[0]?.text||'[]';txt=txt.replace(/```json|```/g,'').trim();
     let mu;try{mu=JSON.parse(txt)}catch(e){mu=null}
@@ -1136,7 +1136,7 @@ Synthesise ALL 8 pillars into a unified ${focus} prediction (${maxWords} words).
 
 Write as flowing prose. No bullets, no markdown. Speak as Samarthaa would — warm, wise, specific, empowering.`;
   try{
-    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},
+    const r=await fetch('/.netlify/functions/claude',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1500,system:'You are Samarthaa, a master Vedic astrologer synthesising all branches of Jyotish. Flowing prose only. No markdown, no bullets. Be specific about the seeker by name.',messages:[{role:'user',content:prompt}]})});
     const d=await r.json();const txt=d.content?.[0]?.text||'Reading unavailable.';
     const pillars=[
