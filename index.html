@@ -971,10 +971,7 @@ async function genKundli(){
   } catch(e) {
     console.error('Kundli error:',e);
     // Fallback to approximate
-    S.chartData = buildChart(S.dob,S.tob);
-    renderKundliGrid(S.chartData);
-    renderPlanetTable(S.chartData);
-    renderYogas(S.chartData);
+    genKundli();
     toast('⚠ Using approximate positions (deploy kundli.js for accurate)');
   }
 }
@@ -1242,21 +1239,56 @@ function renderHoroscope(h,doSpeak){
 // Transits
 async function genTransits(doSpeak){
   if(!S.dob){toast('Enter birth details in Setup');return}
-  if(!S.chartData)S.chartData=buildChart(S.dob,S.tob);
+  if(!S.chartData) await genKundli();
+  if(!S.chartData){toast('Generate Kundli first');return}
   document.getElementById('transitOut').innerHTML='<div class="typing" style="padding:.4rem 0"><span></span><span></span><span></span></div>';
-  const now=new Date();const tc=buildChart(now.toISOString().split('T')[0],'12:00');
-  const natal=S.chartData.planets.map(function(p){return p.n+' H'+p.h+'/'+SIGNS[p.si];}).join(', ');
-  const today=tc.planets.slice(0,7).map(function(p){return p.n+' in '+SIGNS[p.si];}).join(', ');
-  const prompt=`Vedic transit analysis for ${S.name||'seeker'} today ${now.toDateString()}. Natal: ${natal}. Asc: ${S.chartData.ascSign}. Today: ${today}. Return ONLY valid JSON array no markdown: [{"planet":"Saturn","glyph":"♄","title":"short title","body":"2 sentences","date":"period active"},{"planet":"Jupiter","glyph":"♃","title":"..","body":"..","date":".."},{"planet":"Mars","glyph":"♂","title":"..","body":"..","date":".."},{"planet":"Venus","glyph":"♀","title":"..","body":"..","date":".."},{"planet":"Rahu","glyph":"☊","title":"..","body":"..","date":".."}]`;
+  const cf=chartField(S.chartData);
+  const today=new Date().toISOString().split('T')[0];
   try{
-    const r=await fetch('/.netlify/functions/claude',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,system:'Respond ONLY with a valid JSON array. No markdown, no backticks. Start with [',messages:[{role:'user',content:prompt}]})});
-    const d=await r.json();let txt=d.content?.[0]?.text||'[]';txt=txt.replace(/```json|```/g,'').trim();
-    let tr;try{tr=JSON.parse(txt)}catch(e){tr=null}
-    if(!tr||!tr.length){document.getElementById('transitOut').innerHTML='<p class="csubtitle">Parse error. Try again.</p>';return}
-    let html='',spoken='Current transits. ';
-    tr.forEach(t=>{html+=`<div class="trow"><div class="tg">${t.glyph||'★'}</div><div><div class="tit">${t.planet} — ${t.title}</div><div class="tbd">${t.body}</div><div class="tdt">${t.date}</div></div></div>`;spoken+=`${t.planet}: ${t.body} `});
-    document.getElementById('transitOut').innerHTML=html;if(doSpeak)speak(spoken);
+    const r=await fetch('/.netlify/functions/transit',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({date_str:today,natal_asc_si:cf.ascSi,natal_moon_si:cf.moonSi,natal_planet_signs:cf.allPlanetSigns})});
+    const d=await r.json();
+    if(d.error) throw new Error(d.error);
+    const transitSummary=d.planets.map(p=>p.name+' in '+p.sign+' H'+p.transit_house+' ('+p.quality+')'+(p.special_note?' \u2014 '+p.special_note:'')+(p.retrograde?' retrograde':'')).join('; ');
+    const prompt='Vedic Gochara transit reading for '+(S.name||'the seeker')+' today '+today+'. Natal: Asc '+cf.ascSign+', Moon '+cf.moonSign+' ('+cf.moonNak+'). '+(S.dashaData?'Dasha: '+S.dashaData.current_maha+'/'+(S.dashaData.current_antar||'')+'. ':'')+' Current transits: '+transitSummary+'. For each major transit (Saturn, Jupiter, Rahu, Mars, Moon) give a 2-sentence classical Vedic interpretation based on its house from Lagna. Return ONLY valid JSON array no markdown: [{"planet":"Saturn","glyph":"\u2644","house":4,"quality":"challenging","title":"short title","body":"2 sentences","special":"note","date":"duration"}]';
+    const rAI=await fetch('/.netlify/functions/claude',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:900,
+        system:'Respond ONLY with a valid JSON array. No markdown, no backticks. Start with [',
+        messages:[{role:'user',content:prompt}]})});
+    const dAI=await rAI.json();
+    let txt=dAI.content?.[0]?.text||'[]';txt=txt.replace(/```json|```/g,'').trim();
+    let interpretations;try{interpretations=JSON.parse(txt)}catch(e){interpretations=[]}
+    const QUALITY_COLOR={favourable:'rgba(76,200,133,.75)',challenging:'rgba(220,100,100,.72)',neutral:'var(--gold)'};
+    const QUALITY_BG={favourable:'rgba(42,123,90,.07)',challenging:'rgba(139,32,48,.07)',neutral:'rgba(201,150,59,.04)'};
+    const panch=d.panchanga;
+    let html='';
+    if(panch){
+      html+='<div style="display:flex;flex-wrap:wrap;gap:.5rem;padding:.5rem .7rem;background:rgba(255,255,255,.03);border-radius:8px;margin-bottom:.75rem;font-size:.7rem;font-family:Space Mono,monospace">'
+        +'<span style="color:var(--sw)">'+panch.vara+'</span>'
+        +'<span style="color:var(--gold)">'+panch.vara_lord+' day</span>'
+        +'<span style="color:var(--sw)">Moon: <strong style="color:var(--gl)">'+panch.moon_nakshatra+'</strong></span>'
+        +'</div>';
+    }
+    d.planets.forEach(p=>{
+      const interp=interpretations.find(i=>i.planet===p.name)||null;
+      const qColor=QUALITY_COLOR[p.quality]||'var(--gold)';
+      const qBg=QUALITY_BG[p.quality]||'rgba(201,150,59,.04)';
+      html+='<div class="trow" style="background:'+qBg+';border-color:'+qColor.replace('.75','.25').replace('.72','.22')+'">'
+        +'<div class="tg">'+p.glyph+'</div>'
+        +'<div style="flex:1;min-width:0">'
+        +'<div class="tit">'+p.name+(p.retrograde?' \u1D3F':'')+' in '+p.sign+' \u2014 H'+p.transit_house
+          +' <span style="font-size:.6rem;padding:.1rem .4rem;border-radius:4px;background:'+qColor.replace('.75','.15').replace('.72','.12')+';color:'+qColor+'">'+p.quality+'</span></div>'
+        +(p.special_note?'<div style="font-size:.72rem;color:'+qColor+';margin-top:2px">'+p.special_note+'</div>':'')
+        +(interp?'<div class="tbd">'+interp.body+'</div>':'<div class="tbd">'+p.sign+' '+p.degree.toFixed(1)+'\u00b0 ('+p.nakshatra+' Pada '+p.pada+')</div>')
+        +(interp&&interp.date?'<div class="tdt">'+interp.date+'</div>':'')
+        +'</div></div>';
+    });
+    document.getElementById('transitOut').innerHTML=html;
+    if(doSpeak){
+      const major=d.planets.filter(p=>['Saturn','Jupiter','Rahu','Mars'].includes(p.name));
+      const spoken=major.map(p=>{const interp=interpretations.find(i=>i.planet===p.name);return p.name+' in H'+p.transit_house+': '+(interp?interp.body:p.sign+', '+p.quality);}).join(' ');
+      speak("Today's key transits for "+(S.name||'you')+'. '+spoken);
+    }
   }catch(e){document.getElementById('transitOut').innerHTML='<p class="csubtitle">Error: '+e.message+'</p>';console.error('transit error:',e)}
 }
 
@@ -1264,7 +1296,7 @@ async function genTransits(doSpeak){
 async function genSynastry(doSpeak){
   if(!S.dob){toast('Enter your birth details');return}
   const p2d=document.getElementById('p2Dob').value;if(!p2d){toast('Enter partner birth date');return}
-  if(!S.chartData)S.chartData=buildChart(S.dob,S.tob);
+  if(!S.chartData) await genKundli();
   const p2n=document.getElementById('p2Name').value||'Partner';
   const p2c=buildChart(p2d,document.getElementById('p2Tob').value);
   document.getElementById('compatOut').innerHTML='<div class="card"><div class="typing" style="padding:.4rem 0"><span></span><span></span><span></span></div></div>';
@@ -1815,80 +1847,154 @@ async function genMuhurta(doSpeak){
 // Consolidated Prediction — THE CROWN FEATURE
 async function genPredict(doSpeak){
   if(!S.dob){toast('Enter birth details in Setup first');return}
-  if(!S.chartData)S.chartData=buildChart(S.dob,S.tob);
+  if(!S.chartData) await genKundli();
+  if(!S.chartData){toast('Generate Kundli first');return}
+
   const focus=document.getElementById('predictFocus').value;
   const depth=document.getElementById('predictDepth').value;
-  document.getElementById('predictOut').innerHTML='<div class="card"><div class="typing" style="padding:.5rem 0"><span></span><span></span><span></span></div><p class="csubtitle" style="margin-top:.5rem">Samarthaa is weaving all pillars of your chart…</p></div>';
-  if(!S.ashtakScores){const{scores}=calcAshtak(S.chartData);S.ashtakScores=scores}
-  if(!S.shadData)S.shadData=calcShadbala(S.chartData);
-  const now=new Date();const tc=buildChart(now.toISOString().split('T')[0],'12:00');
-  const panch=getPanchanga(now);
-  const bd=new Date(S.dob+'T'+(S.tob||'00:00'));
-  const age=(now-bd)/(1000*60*60*24*365.25);
-  const dsi=S.chartData.moonNakIdx%9;let cum=0,curDasha='',curRem=0;
-  for(let i=0;i<9;i++){const pl=DSEQ[(dsi+i)%9];const s=cum,e=cum+pl.y;if(age>=s&&age<e){curDasha=pl.n;curRem=(e-age).toFixed(1)}cum=e}
-  const strongH=S.ashtakScores.map((s,i)=>s>=28?'H'+(i+1)+'('+HOUSE_MEANINGS[i]+')':null).filter(Boolean);
-  const weakH=S.ashtakScores.map((s,i)=>s<=24?'H'+(i+1)+'('+HOUSE_MEANINGS[i]+')':null).filter(Boolean);
-  const sorted=[...S.shadData].sort((a,b)=>b.total-a.total);
-  const d9Planets=S.chartData.planets.slice(0,7).map(p=>({...p,d9si:calcNavamsa(p.si),d9sign:SIGNS[calcNavamsa(p.si)]}));
-  const vargottama=d9Planets.filter(p=>p.si===p.d9si).map(p=>p.n);
-  const yogas=YRULES.filter(y=>y.test(S.chartData)).map(y=>y.name);
+  document.getElementById('predictOut').innerHTML='<div class="card"><div class="typing" style="padding:.5rem 0"><span></span><span></span><span></span></div><p class="csubtitle" style="margin-top:.5rem">Samarthaa is weaving all pillars of your chart\u2026</p></div>';
+
+  const cf=chartField(S.chartData);
+
+  // ── Pillar 1: Kundli ─────────────────────────────────────────────────────
+  const allPlanets=(S.chartData.planets||[]).map(p=>{
+    const nm=p.name||p.n||'?';
+    const si=p.sign_idx!==undefined?p.sign_idx:(p.si||0);
+    const h=p.house!==undefined?p.house:(p.h||0);
+    return nm+' in '+(SIGNS[si]||'?')+' H'+h+(p.retrograde?' (R)':'');
+  }).join(', ');
+
+  // ── Yogas from YOGA_RULES ─────────────────────────────────────────────────
+  let yogas=[];
+  try{yogas=(YOGA_RULES||[]).filter(y=>{try{return y.test(S.chartData)}catch(e){return false}}).map(y=>y.name);}catch(e){}
+
+  // ── Pillar 2: Navamsa ─────────────────────────────────────────────────────
+  const d9Planets=(S.chartData.planets||[]).slice(0,7).map(p=>{
+    const si=p.sign_idx!==undefined?p.sign_idx:(p.si||0);
+    const d9si=calcNavamsa(si);
+    return{name:p.name||p.n,si,d9si,d9sign:SIGNS[d9si]};
+  });
+  const d9asc=calcNavamsa(cf.ascSi);
+  const vargottama=d9Planets.filter(p=>p.si===p.d9si).map(p=>p.name);
+
+  // ── Pillar 3: Transits (accurate from /transit) ──────────────────────────
+  let transitSummary='Transit data unavailable';
+  try{
+    const today=new Date().toISOString().split('T')[0];
+    const tr=await fetch('/.netlify/functions/transit',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({date_str:today,natal_asc_si:cf.ascSi,natal_moon_si:cf.moonSi,natal_planet_signs:cf.allPlanetSigns})});
+    const td=await tr.json();
+    if(td.planets){
+      transitSummary=td.planets.map(p=>p.name+' in '+p.sign+' H'+p.transit_house+(p.special_note?' ['+p.special_note+']':'')+(p.retrograde?' R':'')).join(', ');
+    }
+  }catch(e){console.warn('Transit fetch failed:',e.message)}
+
+  // ── Pillar 4: Ashtakavarga ───────────────────────────────────────────────
+  let strongH=[], weakH=[];
+  if(S.ashtakScores){
+    strongH=S.ashtakScores.map((s,i)=>s>=30?'H'+(i+1)+'('+HOUSE_MEANINGS[i]+')':null).filter(Boolean);
+    weakH=S.ashtakScores.map((s,i)=>s<=24?'H'+(i+1)+'('+HOUSE_MEANINGS[i]+')':null).filter(Boolean);
+  } else {
+    // Try to get from /ashtak
+    try{
+      const pp={};
+      (S.chartData.planets||[]).forEach(p=>{
+        if(['Sun','Moon','Mars','Mercury','Jupiter','Venus','Saturn'].includes(p.name||p.n))
+          pp[p.name||p.n]=p.sign_idx!==undefined?p.sign_idx:(p.si||0);
+      });
+      const ar=await fetch('/.netlify/functions/ashtak',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({planet_positions:pp,asc_sign_idx:cf.ascSi})});
+      const ad=await ar.json();
+      if(ad.sarvashtakavarga){
+        S.ashtakScores=ad.sarvashtakavarga;
+        strongH=ad.sarvashtakavarga.map((s,i)=>s>=30?'H'+(i+1)+'('+HOUSE_MEANINGS[i]+')':null).filter(Boolean);
+        weakH=ad.sarvashtakavarga.map((s,i)=>s<=24?'H'+(i+1)+'('+HOUSE_MEANINGS[i]+')':null).filter(Boolean);
+      }
+    }catch(e){console.warn('Ashtak fetch failed:',e.message)}
+  }
+
+  // ── Pillar 5: Vimshottari Dasha ──────────────────────────────────────────
+  let curDasha='Unknown', curAntar='', curRem='';
+  if(S.dashaData){
+    curDasha=S.dashaData.current_maha||'Unknown';
+    curAntar=S.dashaData.current_antar||'';
+    curRem=S.dashaData.yrs_rem_maha?S.dashaData.yrs_rem_maha+' yrs remaining':'';
+  } else {
+    // Calculate from Moon
+    try{
+      const moon=(S.chartData.planets||[]).find(p=>(p.name||p.n)==='Moon');
+      if(moon&&moon.longitude){
+        const dr=await fetch('/.netlify/functions/dasha',{method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({moon_longitude:moon.longitude,
+            birth_year:parseInt(S.dob.split('-')[0]),birth_month:parseInt(S.dob.split('-')[1]),
+            birth_day:parseInt(S.dob.split('-')[2]),birth_hour_ist:parseFloat((S.tob||'06:00').split(':')[0])})});
+        const dd=await dr.json();
+        if(dd.current_maha){curDasha=dd.current_maha;curAntar=dd.current_antar||'';curRem=dd.yrs_rem_maha+' yrs remaining';S.dashaData=dd;}
+      }
+    }catch(e){console.warn('Dasha fetch failed:',e.message)}
+  }
+
+  // ── Pillar 6: Shadbala ───────────────────────────────────────────────────
+  let shad=S.shadData;
+  if(!shad){try{shad=calcShadbala(S.chartData);S.shadData=shad;}catch(e){}}
+  const shadSorted=shad?[...shad].sort((a,b)=>b.total-a.total):[];
+
+  // ── Pillar 7: Panchanga today ────────────────────────────────────────────
+  const now=new Date();
+  const dow=now.getDay();
+  const dayNames=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const dayLords=['Sun','Moon','Mars','Mercury','Jupiter','Venus','Saturn'];
+  const todayVar=dayNames[dow];
+  const todayLord=dayLords[dow];
+
+  // ── Build prompt ─────────────────────────────────────────────────────────
   const maxWords=depth==='summary'?220:depth==='deep'?700:420;
-  const prompt=`CONSOLIDATED VEDIC PREDICTION — ALL PILLARS
-Seeker: ${S.name||'the seeker'}, ${S.gender}, born ${S.dob} at ${S.tob} in ${S.city}, ${S.country}.
-Focus: ${focus}
+  const prompt='CONSOLIDATED VEDIC PREDICTION '
+    +'\nSeeker: '+(S.name||'the seeker')+', '+(S.gender||'')+', born '+S.dob+' at '+(S.tob||'06:00')+' in '+(S.city||'India')+'.'
+    +'\nFocus area: '+focus
+    +'\n\nPILLAR 1 - RASHI KUNDLI: Ascendant '+cf.ascSign+'. Planets: '+allPlanets+'. Yogas present: '+(yogas.join(', ')||'none detected')+'.'
+    +'\nPILLAR 2 - NAVAMSA D9: Navamsa Asc '+SIGNS[d9asc]+'. Vargottama planets: '+(vargottama.join(', ')||'none')+'.'
+    +'\nPILLAR 3 - GOCHARA TRANSITS: '+transitSummary+'.'
+    +'\nPILLAR 4 - ASHTAKAVARGA: Strong houses (30+): '+(strongH.join(', ')||'none')+'. Weak (24-): '+(weakH.join(', ')||'none')+'.'
+    +'\nPILLAR 5 - VIMSHOTTARI DASHA: '+curDasha+' Mahadasha'+(curAntar?' / '+curAntar+' Antardasha':'')+'. '+curRem+'.'
+    +'\nPILLAR 6 - SHADBALA: Strongest: '+(shadSorted.slice(0,3).map(p=>p.n).join(', ')||'unknown')+'. Weakest: '+(shadSorted.slice(-2).map(p=>p.n).join(', ')||'unknown')+'.'
+    +'\nPILLAR 7 - PANCHANGA: Today is '+todayVar+' ('+todayLord+' day).'
+    +'\nPILLAR 8 - MOON NAKSHATRA: '+cf.moonNak+' nakshatra, Moon in '+cf.moonSign+'.'
+    +'\n\nSynthesise ALL 8 pillars into a unified '+focus+' prediction ('+maxWords+' words max). Structure as flowing prose with these themes: (1) Overall cosmic signature - what all pillars agree on, (2) Key blessings and strengths, (3) Key challenges and cautions, (4) Specific timing - next 3 months then next year, (5) Three concrete remedies (body, mind, spirit). Speak as Samarthaa - warm, wise, specific, empowering. Address seeker by name. No bullets, no markdown.';
 
-PILLAR 1 — RASHI KUNDLI: Ascendant ${S.chartData.ascSign} (${S.chartData.ascSkt}). Planets: ${S.chartData.planets.map(function(p){return p.n+' in H'+p.h+'/'+SIGNS[p.si];}).join(', ')}. Yogas: ${yogas.join(', ')||'none detected'}.
-
-PILLAR 2 — NAVAMSA D9: Navamsa Asc ${SIGNS[calcNavamsa(S.chartData.asc)]}. Vargottama (D1=D9): ${vargottama.join(', ')||'none'}.
-
-PILLAR 3 — GOCHARA TRANSITS: Current transits — Sun ${SIGNS[tc.planets[0].si]}, Jupiter ${SIGNS[tc.planets[4].si]}, Saturn ${SIGNS[tc.planets[6].si]}, Mars ${SIGNS[tc.planets[2].si]}.
-
-PILLAR 4 — ASHTAKAVARGA: Strong houses (28+): ${strongH.join(', ')||'none'}. Weak houses (24-): ${weakH.join(', ')||'none'}.
-
-PILLAR 5 — VIMSHOTTARI DASHA: Current Mahadasha: ${curDasha} (${curRem} years remaining).
-
-PILLAR 6 — SHADBALA: Strongest planets: ${sorted.slice(0,3).map(p=>p.n).join(', ')}. Weakest: ${sorted.slice(-2).map(p=>p.n).join(', ')}.
-
-PILLAR 7 — PRASHNA MOMENT: Today ${WEEKDAYS_P[panch.dow]}, ${panch.horaLord} Hora, ${panch.nak} nakshatra (${panch.nakQ}), ${panch.yoga} yoga.
-
-PILLAR 8 — PANCHANGA: Tithi ${panch.tithi}. Moon in Prashna: ${panch.moonInPrashna}.
-
-Synthesise ALL 8 pillars into a unified ${focus} prediction (${maxWords} words). Structure as:
-1. Overall cosmic signature — what all pillars agree on
-2. Key blessings and strengths (where multiple pillars align positively)  
-3. Key challenges and cautions (where pillars warn)
-4. Specific timing — near-term (next 3 months), medium-term (next year)
-5. Dharmic guidance — soul's deepest purpose right now
-6. Three concrete remedies — one each for body, mind, spirit
-
-Write as flowing prose. No bullets, no markdown. Speak as Samarthaa would — warm, wise, specific, empowering.`;
   try{
     const r=await fetch('/.netlify/functions/claude',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1500,system:'You are Samarthaa, a master Vedic astrologer synthesising all branches of Jyotish. Flowing prose only. No markdown, no bullets. Be specific about the seeker by name.',messages:[{role:'user',content:prompt}]})});
-    const d=await r.json();const txt=d.content?.[0]?.text||'Reading unavailable.';
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1500,
+        system:'You are Samarthaa, a master Vedic astrologer synthesising all branches of Jyotish. Flowing prose only. No markdown, no bullets. Be specific about the seeker by name.',
+        messages:[{role:'user',content:prompt}]})});
+    const d=await r.json();
+    if(d.error){document.getElementById('predictOut').innerHTML='<div class="card"><p class="csubtitle">API error: '+d.error.message+'</p></div>';return}
+    const txt=d.content?.[0]?.text||'Reading unavailable.';
     const pillars=[
-      {cls:'p1',label:'Rashi Kundli'},{cls:'p2',label:'Navamsa D9'},{cls:'p3',label:'Gochara'},{cls:'p4',label:'Ashtakavarga'},
-      {cls:'p5',label:'Vimshottari Dasha'},{cls:'p6',label:'Shadbala'},{cls:'p7',label:'Prashna'},{cls:'p7',label:'Panchanga'}
+      {cls:'p1',label:'Rashi Kundli'},{cls:'p2',label:'Navamsa D9'},{cls:'p3',label:'Gochara'},
+      {cls:'p4',label:'Ashtakavarga'},{cls:'p5',label:'Vimshottari'},{cls:'p6',label:'Shadbala'},
+      {cls:'p7',label:'Prashna'},{cls:'p7',label:'Panchanga'}
     ];
-    let pillarsHtml=pillars.map(function(p){return '<span class="pillar-badge '+p.cls+'">✦ '+p.label+'</span>';}).join('');
+    const pillarsHtml=pillars.map(p=>'<span class="pillar-badge '+p.cls+'">\u2746 '+p.label+'</span>').join('');
     const focusTitle=focus.charAt(0).toUpperCase()+focus.slice(1);
     const depthTitle=depth.charAt(0).toUpperCase()+depth.slice(1);
     const cleanTxt=txt.replace(/\n\n/g,'<br><br>').replace(/\n/g,' ');
-    let html='<div class="card" style="border-color:rgba(201,150,59,.32);background:rgba(201,150,59,.04)">'
-      +'<div class="ctitle">🔮 '+focusTitle+' — '+depthTitle+' Reading</div>'
+    const html='<div class="card" style="border-color:rgba(201,150,59,.32);background:rgba(201,150,59,.04)">'
+      +'<div class="ctitle">\uD83D\uDD2E '+focusTitle+' \u2014 '+depthTitle+' Reading</div>'
       +'<div style="margin-bottom:.85rem;line-height:1.8">'+pillarsHtml+'</div>'
       +'<div style="border-top:1px solid rgba(201,150,59,.15);padding-top:.85rem">'
       +'<p style="font-size:.92rem;line-height:1.78;color:var(--iv);font-style:italic">'+cleanTxt+'</p>'
       +'</div>'
       +'<div style="margin-top:1rem;padding:.65rem;background:rgba(255,255,255,.03);border-radius:8px;border:1px solid var(--br);text-align:center">'
-      +'<div style="font-family:Cinzel,serif;font-size:.65rem;color:rgba(201,150,59,.55);letter-spacing:.08em;margin-bottom:.3rem">CURRENT DASHA · MOMENT OF READING</div>'
-      +'<div style="font-size:.82rem;color:var(--sw)">'+curDasha+' Mahadasha · '+curRem+' yrs remaining · '+WEEKDAYS_P[panch.dow]+' · '+panch.nak+' nakshatra · '+panch.yoga+' yoga</div>'
-      +'</div>'
-      +'</div>';
+      +'<div style="font-family:Cinzel,serif;font-size:.65rem;color:rgba(201,150,59,.55);letter-spacing:.08em;margin-bottom:.3rem">CURRENT DASHA \u00B7 MOMENT OF READING</div>'
+      +'<div style="font-size:.82rem;color:var(--sw)">'+curDasha+' Mahadasha'+(curAntar?' / '+curAntar:'')+(curRem?' \u00B7 '+curRem:'')+' \u00B7 '+todayVar+' \u00B7 '+cf.moonNak+' nakshatra</div>'
+      +'</div></div>';
     document.getElementById('predictOut').innerHTML=html;
-    if(doSpeak)speak(txt);
-  }catch(e){document.getElementById('predictOut').innerHTML='<div class="card"><p class="csubtitle">Error: '+e.message+'</p></div>';console.error('predict error:',e)}
+    if(doSpeak)speak(txt.slice(0,500));
+  }catch(e){
+    document.getElementById('predictOut').innerHTML='<div class="card"><p class="csubtitle">Error: '+e.message+'</p></div>';
+    console.error('predict error:',e);
+  }
 }
 
 // Init
