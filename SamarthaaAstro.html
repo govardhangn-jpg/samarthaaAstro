@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>SamarthaaAstro — Vedic Oracle</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Cinzel:wght@400;500&family=Space+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --gold:#C9963B;--gl:#E8C568;--gd:rgba(201,150,59,.2);
+  --iv:#F7F0E6;--sw:#C4A882;--mn:#0B0816;--dp:#150F28;
+  --br:rgba(201,150,59,.18);--bh:rgba(201,150,59,.48);
+  --st:#B8A9D4;--sf:#D4611A;--rb:#8B2030;
+  --tab-h:42px;--hdr-h:52px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{font-size:15px}
+body{background:var(--mn);color:var(--iv);font-family:'Cormorant Garamond',serif;height:100dvh;overflow:hidden;display:flex;flex-direction:column}
+#stars{position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse at 25% 40%,#1e0d3a 0%,#0d0820 45%,#050210 100%)}
+.st{position:absolute;border-radius:50%;background:#fff;animation:tw var(--d) ease-in-out infinite var(--dl)}
+@keyframes tw{0%,100%{opacity:var(--lo)}50%{opacity:1;transform:scale(1.4)}}
+
+/* ── Shell ── */
+.shell{position:relative;z-index:1;display:flex;flex-direction:column;height:100dvh;max-width:900px;margin:0 auto;width:100%}
+
+/* ── Header ── */
+header{display:flex;align-items:center;gap:10px;padding:0 14px;height:var(--hdr-h);border-bottom:1px solid var(--br);flex-shrink:0;background:rgba(11,8,22,.92)}
+.logo-ring{width:34px;height:34px;animation:spin 30s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.logo-text h1{font-family:'Cinzel',serif;font-size:clamp(.95rem,3vw,1.2rem);font-weight:400;color:var(--gl);letter-spacing:.1em}
+.logo-text p{font-size:.65rem;font-style:italic;color:var(--sw);letter-spacing:.03em;display:none}
+@media(min-width:400px){.logo-text p{display:block}}
+.cpill{margin-left:auto;display:flex;align-items:center;gap:5px;padding:4px 10px;background:var(--gd);border:1px solid var(--br);border-radius:20px;font-size:.65rem;color:var(--sw);cursor:pointer;font-family:'Space Mono',monospace;white-space:nowrap}
+.cpill:active{opacity:.7}
+.dot{width:6px;height:6px;border-radius:50%;background:#555;flex-shrink:0}.dot.ok{background:#4caf85}
+
+/* ── Tab bar ── */
+nav{display:flex;height:var(--tab-h);border-bottom:1px solid var(--br);flex-shrink:0;background:rgba(0,0,0,.25);overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+nav::-webkit-scrollbar{display:none}
+.tab{padding:0 12px;height:var(--tab-h);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;font-family:'Cinzel',serif;font-size:.62rem;letter-spacing:.07em;color:var(--sw);transition:color .2s,border-color .2s;white-space:nowrap;flex-shrink:0}
+.tab:active{opacity:.7}.tab.on{color:var(--gl);border-bottom-color:var(--gold)}
+
+/* ── Panels ── */
+main{flex:1;overflow:hidden;position:relative}
+.panel{display:none;position:absolute;inset:0;flex-direction:column;overflow:hidden}.panel.on{display:flex}
+.spanel{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 14px 80px}
+.spanel::-webkit-scrollbar{width:3px}.spanel::-webkit-scrollbar-thumb{background:var(--gd);border-radius:2px}
+
+/* ── Cards ── */
+.card{background:rgba(255,255,255,.04);border:1px solid var(--br);border-radius:12px;padding:1rem;margin-bottom:.85rem}
+.ctitle{font-family:'Cinzel',serif;font-size:.7rem;color:var(--gold);letter-spacing:.09em;text-transform:uppercase;margin-bottom:.8rem}
+.csubtitle{font-size:.78rem;color:var(--sw);font-style:italic;line-height:1.55;margin-bottom:.8rem}
+
+/* ── Forms ── */
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-bottom:.7rem}
+@media(max-width:400px){.frow{grid-template-columns:1fr}}
+.fg{display:flex;flex-direction:column;gap:.25rem}
+label{font-size:.72rem;color:var(--sw)}
+input,select,textarea{background:rgba(255,255,255,.06);border:1px solid var(--br);border-radius:8px;padding:.5rem .75rem;color:var(--iv);font-family:'Cormorant Garamond',serif;font-size:.9rem;outline:none;transition:border-color .2s;width:100%;-webkit-appearance:none}
+input:focus,select:focus,textarea:focus{border-color:var(--gold)}
+select option{background:var(--dp)}
+input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-calendar-picker-indicator{filter:invert(.6) sepia(.4)}
+
+/* ── Buttons ── */
+.abtn{display:inline-flex;align-items:center;gap:5px;padding:.45rem .9rem;background:rgba(201,150,59,.12);border:1px solid var(--bh);border-radius:8px;cursor:pointer;font-family:'Cinzel',serif;font-size:.65rem;letter-spacing:.07em;color:var(--gl);transition:background .2s;white-space:nowrap;touch-action:manipulation}
+.abtn:active{background:rgba(201,150,59,.25)}
+.gbtn{width:100%;padding:.72rem;background:linear-gradient(135deg,rgba(201,150,59,.18),rgba(139,62,15,.12));border:1px solid var(--bh);border-radius:10px;cursor:pointer;font-family:'Cinzel',serif;font-size:.75rem;letter-spacing:.09em;color:var(--gl);transition:background .2s;touch-action:manipulation}
+.gbtn:active{background:linear-gradient(135deg,rgba(201,150,59,.28),rgba(139,62,15,.22))}
+.sbtn{width:100%;margin-top:.85rem;padding:.85rem;background:linear-gradient(135deg,rgba(201,150,59,.25),rgba(139,62,15,.18));border:1px solid var(--bh);border-radius:10px;cursor:pointer;font-family:'Cinzel',serif;font-size:.82rem;letter-spacing:.09em;color:var(--gl);touch-action:manipulation;-webkit-appearance:none}
+.btnrow{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.7rem}
+
+/* ── Oracle chat ── */
+.chat-wrap{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 14px;display:flex;flex-direction:column;gap:11px}
+.chat-wrap::-webkit-scrollbar{width:3px}.chat-wrap::-webkit-scrollbar-thumb{background:var(--gd);border-radius:2px}
+.cempty{flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;opacity:.3;text-align:center;padding:2rem}
+.cempty p{font-style:italic;font-size:.95rem}.cempty small{font-size:.72rem;color:var(--sw)}
+.msg{display:flex;gap:8px;align-items:flex-start;animation:fu .3s ease}
+@keyframes fu{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.msg.user{flex-direction:row-reverse}
+.av{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0}
+.msg.oracle .av{background:rgba(201,150,59,.13);border:1px solid rgba(201,150,59,.3)}
+.msg.user .av{background:rgba(184,169,212,.12);border:1px solid rgba(184,169,212,.25)}
+.bubble{max-width:82%;padding:.65rem .95rem;border-radius:12px;font-size:.92rem;line-height:1.65}
+.msg.oracle .bubble{background:rgba(255,255,255,.05);border:1px solid rgba(201,150,59,.13)}
+.msg.user .bubble{background:rgba(184,169,212,.09);border:1px solid rgba(184,169,212,.15);color:var(--st);text-align:right}
+.typing span{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--gold);margin:0 2px;animation:bl 1.2s ease infinite}
+.typing span:nth-child(2){animation-delay:.2s}.typing span:nth-child(3){animation-delay:.4s}
+@keyframes bl{0%,80%,100%{opacity:.2;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}
+
+/* ── Voice bar ── */
+.vbar{padding:8px 12px;display:flex;align-items:center;gap:9px;border-top:1px solid var(--br);flex-shrink:0;background:rgba(0,0,0,.28)}
+.vstate{display:flex;align-items:center;gap:6px;min-width:90px}
+.wanim{display:flex;align-items:center;gap:2px;height:20px}
+.wanim span{width:3px;border-radius:2px;background:var(--gold);animation:wv .8s ease infinite}
+.wanim span:nth-child(1){height:5px}.wanim span:nth-child(2){height:12px;animation-delay:.1s}
+.wanim span:nth-child(3){height:8px;animation-delay:.2s}.wanim span:nth-child(4){height:16px;animation-delay:.15s}.wanim span:nth-child(5){height:7px;animation-delay:.05s}
+@keyframes wv{0%,100%{transform:scaleY(.35)}50%{transform:scaleY(1)}}
+.slbl{font-family:'Space Mono',monospace;font-size:.6rem;color:var(--gold);letter-spacing:.05em}.slbl.idle{color:var(--sw);opacity:.45}
+.micbtn{width:46px;height:46px;border-radius:50%;border:2px solid var(--bh);background:rgba(201,150,59,.1);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;touch-action:manipulation}
+.micbtn.rec{background:rgba(139,26,47,.38);border-color:rgba(232,80,80,.65);animation:pr 1.5s ease infinite}
+.micbtn.spk{background:rgba(30,80,150,.2);border-color:rgba(100,150,232,.45)}
+@keyframes pr{0%,100%{box-shadow:0 0 0 0 rgba(232,80,80,.4)}50%{box-shadow:0 0 0 8px rgba(232,80,80,0)}}
+.tinput{flex:1;background:rgba(255,255,255,.055);border:1px solid var(--br);border-radius:20px;padding:.58rem 1rem;color:var(--iv);font-family:'Cormorant Garamond',serif;font-size:.92rem;outline:none;min-width:0}
+.tinput:focus{border-color:var(--gold)}.tinput::placeholder{color:rgba(196,168,130,.38)}
+.sndbtn{width:38px;height:38px;border-radius:50%;border:1px solid var(--bh);background:rgba(201,150,59,.12);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;touch-action:manipulation}
+
+/* ── Kundli grid ── */
+.kgrid{display:grid;grid-template-columns:repeat(5,1fr);border:2px solid rgba(201,150,59,.4);max-width:340px;margin:0 auto .8rem;background:rgba(0,0,0,.4)}
+.kc{border:1px solid rgba(201,150,59,.15);min-height:60px;padding:3px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1px;position:relative;text-align:center}
+.kc.ctr{background:rgba(201,150,59,.06)}.kc.asc-c{border-color:rgba(201,150,59,.45);background:rgba(201,150,59,.05)}
+.khn{font-family:'Cinzel',serif;font-size:.48rem;color:rgba(201,150,59,.3);position:absolute;top:2px;left:3px}
+.kpl{font-size:.8rem;color:var(--gl);line-height:1.25}
+.ksg{font-style:italic;font-size:.55rem;color:rgba(196,168,130,.6)}
+
+/* ── Tables ── */
+.ptable{width:100%;border-collapse:collapse;font-size:.82rem}
+.ptable th{font-family:'Cinzel',serif;font-size:.6rem;color:var(--gold);letter-spacing:.07em;padding:.38rem .55rem;border-bottom:1px solid rgba(201,150,59,.16);text-align:left}
+.ptable td{padding:.38rem .55rem;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:middle}
+.ptable tr:hover td{background:rgba(255,255,255,.02)}
+.glyph{font-size:1.05rem}
+
+/* ── Horoscope ── */
+.hsec{border-left:2px solid rgba(201,150,59,.28);padding-left:.85rem;margin-bottom:.85rem}
+.hsec h3{font-family:'Cinzel',serif;font-size:.72rem;color:var(--gold);letter-spacing:.07em;margin-bottom:.25rem}
+.hsec p{font-size:.88rem;line-height:1.62;color:var(--iv);font-style:italic}
+.hmeter{display:flex;align-items:center;gap:6px;margin-top:.32rem}
+.hml{font-size:.68rem;color:var(--sw);min-width:50px}
+.htrack{flex:1;height:3px;background:rgba(255,255,255,.1);border-radius:2px}
+.hfill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--sf),var(--gl))}
+.hnum{font-size:.68rem;color:var(--gold);min-width:26px;text-align:right;font-family:'Space Mono',monospace}
+
+/* ── Dasha ── */
+.dbar{display:flex;align-items:center;gap:9px;padding:.62rem .8rem;border-radius:9px;background:rgba(255,255,255,.028);border:1px solid rgba(201,150,59,.1);margin-bottom:.48rem}
+.dbar.cur{border-color:rgba(201,150,59,.42);background:rgba(201,150,59,.065)}
+.dpic{font-size:1.2rem;width:24px;text-align:center;flex-shrink:0}
+.dinf{flex:1;min-width:0}
+.dname{font-family:'Cinzel',serif;font-size:.76rem;color:var(--gold)}
+.dper{font-size:.68rem;color:var(--sw);margin-top:1px}
+.dtrk{height:3px;background:rgba(255,255,255,.08);border-radius:2px;margin-top:3px}
+.dfl{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--sf),var(--gold))}
+.cbadge{font-size:.58rem;color:var(--gold);font-family:'Space Mono',monospace;margin-left:5px}
+
+/* ── Transits ── */
+.trow{display:flex;align-items:flex-start;gap:9px;padding:.7rem;border-radius:9px;background:rgba(255,255,255,.03);border:1px solid rgba(201,150,59,.1);margin-bottom:.48rem}
+.tg{font-size:1.3rem;width:28px;text-align:center;flex-shrink:0;padding-top:1px}
+.tit{font-family:'Cinzel',serif;font-size:.76rem;color:var(--gl);letter-spacing:.05em}
+.tbd{font-size:.83rem;line-height:1.52;color:var(--sw);margin-top:2px;font-style:italic}
+.tdt{font-family:'Space Mono',monospace;font-size:.6rem;color:rgba(201,150,59,.45);margin-top:3px}
+
+/* ── Synastry ── */
+.sring{width:90px;height:90px;margin:0 auto .8rem;position:relative;display:flex;align-items:center;justify-content:center}
+.sring svg{position:absolute;inset:0;transform:rotate(-90deg)}
+.snum{font-family:'Cinzel',serif;font-size:1.38rem;color:var(--gl);text-align:center;z-index:1}
+.slbr{font-size:.6rem;color:var(--sw);text-align:center;margin-top:1px}
+.krow{display:flex;align-items:center;gap:6px;padding:.38rem .55rem;border-bottom:1px solid rgba(255,255,255,.04)}
+.kname{font-size:.76rem;color:var(--sw);min-width:95px}
+.ktrack{flex:1;height:4px;background:rgba(255,255,255,.07);border-radius:2px;overflow:hidden}
+.kfill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--rb),var(--gold),#4caf85)}
+.kscore{font-family:'Space Mono',monospace;font-size:.65rem;color:var(--gold);min-width:34px;text-align:right}
+
+/* ── Ashtakavarga ── */
+.avg-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:.85rem}
+@media(min-width:480px){.avg-grid{grid-template-columns:repeat(6,1fr)}}
+.avg-cell{background:rgba(255,255,255,.04);border:1px solid rgba(201,150,59,.13);border-radius:7px;padding:.45rem .3rem;text-align:center}
+.avg-cell.strong{border-color:rgba(76,175,133,.4);background:rgba(42,123,90,.08)}
+.avg-cell.weak{border-color:rgba(200,80,80,.3);background:rgba(139,32,48,.07)}
+.avg-house{font-family:'Cinzel',serif;font-size:.52rem;color:rgba(201,150,59,.45);letter-spacing:.04em}
+.avg-sign{font-size:.55rem;color:var(--sw);font-style:italic;margin:.08rem 0}
+.avg-score{font-size:1.1rem;font-family:'Cinzel',serif;color:var(--gl)}
+.avg-cell.strong .avg-score{color:#4caf85}.avg-cell.weak .avg-score{color:#e06060}
+.avg-bar{height:3px;border-radius:2px;background:rgba(255,255,255,.06);margin-top:.22rem;overflow:hidden}
+.avg-fill{height:100%;border-radius:2px}
+.pra-row{display:flex;align-items:center;gap:6px;padding:.38rem .5rem;border-bottom:1px solid rgba(255,255,255,.035)}
+.pra-glyph{font-size:1rem;width:20px;text-align:center;flex-shrink:0}
+.pra-name{font-size:.72rem;color:var(--sw);min-width:58px}
+.pra-bars{flex:1;display:flex;gap:2px}
+.pra-bar{flex:1;height:15px;border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:.5rem;font-family:'Space Mono',monospace}
+
+/* ── Prashna ── */
+.panch-row{display:flex;align-items:center;gap:6px;padding:.32rem .5rem;border-bottom:1px solid rgba(255,255,255,.035);font-size:.8rem}
+.panch-row:last-child{border-bottom:none}
+.pl{color:var(--sw);min-width:82px;font-size:.72rem}
+.pv{color:var(--iv);font-style:italic;flex:1;font-size:.8rem}
+.pq{font-size:.6rem;font-family:'Space Mono',monospace;padding:.1rem .4rem;border-radius:4px;flex-shrink:0}
+.pq.auspicious{background:rgba(42,123,90,.18);color:#4caf85}
+.pq.inauspicious{background:rgba(139,32,48,.18);color:#e08080}
+.pq.neutral,.pq.mixed{background:rgba(201,150,59,.1);color:var(--gold)}
+.shakuna-box{padding:.65rem .82rem;border-radius:9px;border-left:3px solid;margin-bottom:.62rem}
+.shakuna-box.auspicious{border-color:rgba(76,175,133,.52);background:rgba(42,123,90,.07)}
+.shakuna-box.inauspicious{border-color:rgba(200,80,80,.42);background:rgba(139,32,48,.07)}
+.shakuna-box.neutral,.shakuna-box.mixed{border-color:rgba(201,150,59,.4);background:rgba(201,150,59,.05)}
+.shakuna-title{font-family:'Cinzel',serif;font-size:.67rem;letter-spacing:.06em;margin-bottom:.22rem}
+.shakuna-box.auspicious .shakuna-title{color:rgba(76,200,133,.72)}
+.shakuna-box.inauspicious .shakuna-title{color:rgba(220,100,100,.72)}
+.shakuna-box.neutral .shakuna-title,.shakuna-box.mixed .shakuna-title{color:var(--gold)}
+.verdict-box{text-align:center;padding:.85rem;border:1px solid;border-radius:12px;margin:.8rem 0}
+.verdict-box.yes{border-color:rgba(76,175,133,.46);background:rgba(42,123,90,.08)}
+.verdict-box.no{border-color:rgba(200,80,80,.4);background:rgba(139,32,48,.08)}
+.verdict-box.maybe,.verdict-box.conditional{border-color:rgba(201,150,59,.4);background:rgba(201,150,59,.06)}
+.vword{font-family:'Cinzel',serif;font-size:1.65rem;letter-spacing:.13em}
+.verdict-box.yes .vword{color:#4caf85}.verdict-box.no .vword{color:#e06060}
+.verdict-box.maybe .vword,.verdict-box.conditional .vword{color:var(--gl)}
+.vconf{font-size:.68rem;color:var(--sw);margin-top:.25rem;font-family:'Space Mono',monospace}
+
+/* ── Navamsa ── */
+.navamsa-pair{display:grid;grid-template-columns:1fr 1fr;gap:.85rem;margin-bottom:.85rem}
+@media(max-width:400px){.navamsa-pair{grid-template-columns:1fr}}
+
+/* ── Shadbala ── */
+.shad-row{display:flex;align-items:center;gap:8px;padding:.42rem .55rem;border-bottom:1px solid rgba(255,255,255,.04)}
+.shad-planet{display:flex;align-items:center;gap:6px;min-width:80px}
+.shad-glyph{font-size:1rem;width:18px;text-align:center}
+.shad-name{font-size:.75rem;color:var(--sw)}
+.shad-track{flex:1;height:5px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden}
+.shad-fill{height:100%;border-radius:3px}
+.shad-score{font-family:'Space Mono',monospace;font-size:.65rem;color:var(--gl);min-width:52px;text-align:right}
+
+/* ── Consolidated ── */
+.pillar-badge{display:inline-flex;align-items:center;gap:4px;padding:.22rem .65rem;border-radius:20px;font-family:'Cinzel',serif;font-size:.58rem;letter-spacing:.06em;margin:.2rem .2rem .2rem 0}
+.pillar-badge.p1{background:rgba(201,150,59,.12);border:1px solid rgba(201,150,59,.35);color:var(--gl)}
+.pillar-badge.p2{background:rgba(100,150,232,.1);border:1px solid rgba(100,150,232,.3);color:rgba(160,200,255,.85)}
+.pillar-badge.p3{background:rgba(76,175,133,.1);border:1px solid rgba(76,175,133,.28);color:#4caf85}
+.pillar-badge.p4{background:rgba(184,169,212,.1);border:1px solid rgba(184,169,212,.28);color:var(--st)}
+.pillar-badge.p5{background:rgba(200,80,80,.1);border:1px solid rgba(200,80,80,.28);color:#e08080}
+.pillar-badge.p6{background:rgba(42,123,90,.12);border:1px solid rgba(42,123,90,.3);color:#6ed4a0}
+.pillar-badge.p7{background:rgba(232,196,104,.1);border:1px solid rgba(232,196,104,.28);color:var(--gl)}
+.life-area{padding:.62rem .78rem;border-radius:9px;border-left:3px solid;margin-bottom:.55rem}
+.life-area.positive{border-color:rgba(76,175,133,.5);background:rgba(42,123,90,.07)}
+.life-area.caution{border-color:rgba(232,150,50,.45);background:rgba(139,80,15,.07)}
+.life-area.challenging{border-color:rgba(200,80,80,.4);background:rgba(139,32,48,.07)}
+.la-title{font-family:'Cinzel',serif;font-size:.72rem;letter-spacing:.07em;margin-bottom:.2rem}
+.life-area.positive .la-title{color:rgba(76,200,133,.75)}
+.life-area.caution .la-title{color:rgba(232,160,70,.8)}
+.life-area.challenging .la-title{color:rgba(220,100,100,.75)}
+.la-body{font-size:.85rem;line-height:1.58;color:var(--iv);font-style:italic}
+.overall-verdict{text-align:center;padding:1rem;border:1px solid rgba(201,150,59,.35);border-radius:12px;margin:.85rem 0;background:rgba(201,150,59,.055)}
+.ov-score{font-family:'Cinzel',serif;font-size:2rem;color:var(--gl);letter-spacing:.05em}
+.ov-label{font-size:.7rem;color:var(--sw);margin-top:.2rem;font-family:'Space Mono',monospace}
+.ov-text{font-size:.9rem;line-height:1.62;color:var(--iv);font-style:italic;margin-top:.65rem}
+
+/* ── Muhurta ── */
+.muhurta-slot{display:flex;align-items:flex-start;gap:.7rem;padding:.62rem .75rem;border-radius:9px;background:rgba(255,255,255,.03);border:1px solid rgba(201,150,59,.1);margin-bottom:.48rem}
+.ms-quality{width:7px;border-radius:3px;flex-shrink:0;align-self:stretch}
+.ms-quality.good{background:rgba(76,175,133,.6)}.ms-quality.neutral{background:rgba(201,150,59,.5)}.ms-quality.bad{background:rgba(200,80,80,.5)}
+.ms-time{font-family:'Space Mono',monospace;font-size:.65rem;color:var(--gl);min-width:50px;padding-top:.12rem}
+.ms-info{flex:1}
+.ms-name{font-family:'Cinzel',serif;font-size:.75rem;color:var(--iv);letter-spacing:.05em}
+.ms-body{font-size:.78rem;color:var(--sw);font-style:italic;margin-top:.18rem;line-height:1.45}
+
+/* ── Settings overlay ── */
+.overlay{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.82)}
+.overlay.on{display:flex;flex-direction:column;justify-content:flex-end}
+@media(min-width:540px){.overlay.on{justify-content:center;padding:1rem}}
+.modal{background:var(--dp);border:1px solid var(--bh);border-radius:20px 20px 0 0;padding:1rem 1.2rem 2rem;width:100%;max-width:540px;max-height:92dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;position:relative;margin:0 auto}
+@media(min-width:540px){.modal{border-radius:16px;padding:1.4rem;margin:auto;max-height:88dvh}}
+.modal::-webkit-scrollbar{width:3px}.modal::-webkit-scrollbar-thumb{background:var(--gd);border-radius:2px}
+.modal-drag{width:36px;height:4px;background:rgba(255,255,255,.14);border-radius:2px;margin:0 auto .9rem}
+.mcl{position:absolute;top:14px;right:14px;background:rgba(255,255,255,.07);border:1px solid var(--br);color:var(--sw);cursor:pointer;font-size:.85rem;line-height:1;padding:5px 9px;border-radius:8px;touch-action:manipulation;z-index:1}
+.mcl:active{background:rgba(255,255,255,.15)}
+.modal h2{font-family:'Cinzel',serif;font-size:.9rem;color:var(--gold);letter-spacing:.1em;margin-bottom:1rem}
+.slabel{font-family:'Cinzel',serif;font-size:.65rem;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;margin:1rem 0 .45rem;opacity:.75}
+
+/* ── Info boxes ── */
+.ibox{padding:.62rem .78rem;border-radius:8px;margin-bottom:.58rem;border-left:3px solid}
+.ibox.green{border-color:rgba(76,175,133,.45);background:rgba(42,123,90,.07)}
+.ibox.amber{border-color:rgba(201,150,59,.45);background:rgba(201,150,59,.055)}
+.ibox.red{border-color:rgba(200,80,80,.4);background:rgba(139,32,48,.07)}
+.ibox.blue{border-color:rgba(100,150,232,.35);background:rgba(42,80,160,.06)}
+.ibox-title{font-family:'Cinzel',serif;font-size:.66rem;letter-spacing:.07em;margin-bottom:.18rem}
+.ibox.green .ibox-title{color:rgba(76,200,133,.72)}.ibox.amber .ibox-title{color:rgba(201,150,59,.8)}
+.ibox.red .ibox-title{color:rgba(220,100,100,.72)}.ibox.blue .ibox-title{color:rgba(100,170,255,.7)}
+.ibox p{font-size:.84rem;line-height:1.55;color:var(--iv);font-style:italic}
+
+/* ── Toast ── */
+#toast{position:fixed;bottom:1.2rem;left:50%;transform:translateX(-50%);background:rgba(15,8,22,.97);border:1px solid var(--bh);color:var(--iv);padding:.5rem 1.2rem;border-radius:20px;font-size:.78rem;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;max-width:90vw;text-align:center}
+#toast.on{opacity:1}
+
+@media(min-width:600px){
+  html{font-size:16px}
+  .logo-text p{display:block}
+  .avg-grid{grid-template-columns:repeat(6,1fr)}
+  .kc{min-height:72px}
+}
+</style>
+</head>
+<body>
+<div id="stars"></div>
+<div class="shell">
+  <header>
+    <svg class="logo-ring" viewBox="0 0 34 34" fill="none">
+      <circle cx="17" cy="17" r="16" stroke="rgba(201,150,59,.4)" stroke-width=".5"/>
+      <circle cx="17" cy="17" r="10" stroke="rgba(201,150,59,.25)" stroke-width=".4"/>
+      <circle cx="17" cy="17" r="3" fill="rgba(201,150,59,.6)"/>
+      <g stroke="rgba(201,150,59,.4)" stroke-width=".5">
+        <line x1="17" y1="1" x2="17" y2="33"/><line x1="1" y1="17" x2="33" y2="17"/>
+        <line x1="5" y1="5" x2="29" y2="29"/><line x1="29" y1="5" x2="5" y2="29"/>
+      </g>
+      <polygon points="17,2 18.2,5.5 17,4.5 15.8,5.5" fill="rgba(201,150,59,.65)"/>
+    </svg>
+    <div class="logo-text"><h1>SamarthaaAstro</h1><p>Vedic Astrology Oracle</p></div>
+    <div class="cpill" onclick="openSettings()"><div class="dot" id="cfgDot"></div><span id="cfgLbl">Setup</span></div>
+  </header>
+  <nav id="navBar">
+    <button class="tab on" onclick="switchTab('oracle')">☽ Oracle</button>
+    <button class="tab" onclick="switchTab('kundli')">⬡ Kundli</button>
+    <button class="tab" onclick="switchTab('horo')">☀ Horoscope</button>
+    <button class="tab" onclick="switchTab('transit')">♄ Transits</button>
+    <button class="tab" onclick="switchTab('compat')">♡ Synastry</button>
+    <button class="tab" onclick="switchTab('dasha')">◎ Dasha</button>
+    <button class="tab" onclick="switchTab('ashtak')">⊕ Ashtakavarga</button>
+    <button class="tab" onclick="switchTab('prashna')">✧ Prashna</button>
+    <button class="tab" onclick="switchTab('navamsa')">❋ Navamsa</button>
+    <button class="tab" onclick="switchTab('shadbala')">⚖ Shadbala</button>
+    <button class="tab" onclick="switchTab('muhurta')">⏳ Muhurta</button>
+    <button class="tab predict-tab" onclick="switchTab('predict')">🔮 Prediction</button>
+  </nav>
+  <main>
+
+  <!-- ORACLE -->
+  <div class="panel on" id="panel-oracle">
+    <div class="chat-wrap" id="chatWrap">
+      <div class="cempty" id="chatEmpty">
+        <svg width="40" height="40" viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="18" stroke="rgba(201,150,59,.5)" stroke-width=".8"/><circle cx="20" cy="20" r="11" stroke="rgba(201,150,59,.28)" stroke-width=".4"/><circle cx="20" cy="20" r="2.5" fill="rgba(201,150,59,.5)"/><line x1="20" y1="2" x2="20" y2="9" stroke="rgba(201,150,59,.45)" stroke-width=".8"/><line x1="20" y1="31" x2="20" y2="38" stroke="rgba(201,150,59,.45)" stroke-width=".8"/><line x1="2" y1="20" x2="9" y2="20" stroke="rgba(201,150,59,.45)" stroke-width=".8"/><line x1="31" y1="20" x2="38" y2="20" stroke="rgba(201,150,59,.45)" stroke-width=".8"/></svg>
+        <p>Speak to Samarthaa</p><small>Press the mic · ask by voice</small>
+      </div>
+    </div>
+    <div class="vbar">
+      <div class="vstate"><div class="wanim" id="wanim" style="display:none"><span></span><span></span><span></span><span></span><span></span></div><span class="slbl idle" id="slbl">Ready</span></div>
+      <button class="micbtn" id="micbtn" onclick="toggleMic()">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="rgba(201,150,59,.85)" stroke-width="2" stroke-linecap="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 19v4M8 23h8"/></svg>
+      </button>
+      <input class="tinput" id="userInput" placeholder="…or type your question" onkeydown="if(event.key==='Enter')sendMsg()"/>
+      <button class="sndbtn" onclick="sendMsg()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(201,150,59,.9)" stroke-width="2.2" stroke-linecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- KUNDLI -->
+  <div class="panel" id="panel-kundli">
+    <div class="spanel">
+      <div class="card">
+        <div class="ctitle">Birth Chart — North Indian Style</div>
+        <div id="kundliOut"><p class="csubtitle" style="text-align:center">Configure birth details in Setup, then generate</p></div>
+        <div class="btnrow"><button class="gbtn" style="flex:1" onclick="genKundli()">✦ Generate Kundli</button><button class="abtn" onclick="speakKundli()">🔊 Speak</button></div>
+      </div>
+      <div class="card" id="pcardEl" style="display:none"><div class="ctitle">Graha Sthiti</div><div id="planetOut"></div></div>
+      <div class="card" id="yogaCardEl" style="display:none"><div class="ctitle">Yogas in Chart</div><div id="yogaOut"></div></div>
+    </div>
+  </div>
+
+  <!-- HOROSCOPE -->
+  <div class="panel" id="panel-horo">
+    <div class="spanel">
+      <div class="card">
+        <div class="ctitle">Daily Horoscope</div>
+        <div style="display:flex;gap:.5rem;margin-bottom:.85rem;align-items:flex-end;flex-wrap:wrap">
+          <div class="fg" style="flex:1"><label>Date</label><input type="date" id="horoDate"/></div>
+          <button class="abtn" onclick="genHoroscope(false)">✦ Read</button>
+          <button class="abtn" onclick="genHoroscope(true)">🔊 Speak</button>
+        </div>
+        <div id="horoOut"><p class="csubtitle">Select a date to receive your daily Vedic reading</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TRANSITS -->
+  <div class="panel" id="panel-transit">
+    <div class="spanel">
+      <div class="card">
+        <div class="ctitle">Gochara — Planetary Transits</div>
+        <div class="btnrow"><button class="abtn" onclick="genTransits(false)">✦ Calculate</button><button class="abtn" onclick="genTransits(true)">🔊 Speak</button></div>
+        <div id="transitOut" style="margin-top:.8rem"><p class="csubtitle">See how today's transits affect your natal chart</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SYNASTRY -->
+  <div class="panel" id="panel-compat">
+    <div class="spanel">
+      <div class="card">
+        <div class="ctitle">Compatibility — Ashtakoot Milan</div>
+        <div class="frow">
+          <div class="fg"><label>Partner Name</label><input id="p2Name" placeholder="e.g. Priya"/></div>
+          <div class="fg"><label>Date of Birth</label><input type="date" id="p2Dob" value="1992-06-15"/></div>
+        </div>
+        <div class="frow">
+          <div class="fg"><label>Time of Birth</label><input type="time" id="p2Tob" value="12:00"/></div>
+          <div class="fg"><label>Birth City</label><input id="p2City" placeholder="e.g. Delhi"/></div>
+        </div>
+        <div class="btnrow"><button class="gbtn" style="flex:1" onclick="genSynastry(false)">✦ Calculate</button><button class="abtn" onclick="genSynastry(true)">🔊 Speak</button></div>
+      </div>
+      <div id="compatOut"></div>
+    </div>
+  </div>
+
+  <!-- DASHA -->
+  <div class="panel" id="panel-dasha">
+    <div class="spanel">
+      <div class="card">
+        <div class="ctitle">Vimshottari Dasha</div>
+        <div class="btnrow"><button class="abtn" onclick="genDasha(false)">✦ Calculate</button><button class="abtn" onclick="genDasha(true)">🔊 Speak</button></div>
+        <div id="dashaOut" style="margin-top:.8rem"><p class="csubtitle">Generate Kundli first to see your Dasha timeline</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ASHTAKAVARGA -->
+  <div class="panel" id="panel-ashtak">
+    <div class="spanel">
+      <div class="card">
+        <div class="ctitle">Sarvashtakavarga</div>
+        <p class="csubtitle">Collective benefic points across 12 houses. 28+ = strong, below 25 = weak.</p>
+        <div class="btnrow"><button class="abtn" onclick="genAshtak(false)">✦ Calculate</button><button class="abtn" onclick="genAshtak(true)">🔊 Speak</button></div>
+        <div id="ashtakGrid" style="margin-top:.8rem"><p class="csubtitle">Generate Kundli first</p></div>
+      </div>
+      <div class="card" id="ashtakIntCard" style="display:none"><div class="ctitle">House Strength</div><div id="ashtakInt"></div></div>
+      <div class="card" id="ashtakAICard" style="display:none"><div class="ctitle">Samarthaa's Reading</div><div id="ashtakAI"></div></div>
+    </div>
+  </div>
+
+  <!-- PRASHNA -->
+  <div class="panel" id="panel-prashna">
+    <div class="spanel">
+      <div class="card">
+        <div class="ctitle">✧ Prashna Shastra — Horary</div>
+        <p class="csubtitle">The moment you ask becomes your chart. Panchanga + Shakuna + Direction reveal the cosmic answer.</p>
+        <div class="frow">
+          <div class="fg"><label>Your Question</label><input id="prashnaQ" placeholder="e.g. Will I get this job?"/></div>
+          <div class="fg"><label>Category</label><select id="prashnaType">
+            <option value="general">General Guidance</option><option value="career">Career &amp; Business</option>
+            <option value="relationship">Love &amp; Relationships</option><option value="health">Health</option>
+            <option value="finance">Finance &amp; Wealth</option><option value="travel">Travel</option>
+            <option value="spiritual">Spiritual Progress</option><option value="property">Property &amp; Home</option>
+          </select></div>
+        </div>
+        <div class="frow">
+          <div class="fg"><label>Shakuna (first thing noticed today)</label><input id="prashnaShakuna" placeholder="e.g. crow, jasmine, rain…"/></div>
+          <div class="fg"><label>Direction you were facing</label><select id="prashnaDir">
+            <option value="East">East (Purva)</option><option value="Northeast">Northeast (Ishanya)</option>
+            <option value="North">North (Uttara)</option><option value="Northwest">Northwest (Vayavya)</option>
+            <option value="West">West (Paschima)</option><option value="Southwest">Southwest (Nairutya)</option>
+            <option value="South">South (Dakshina)</option><option value="Southeast">Southeast (Agneya)</option>
+          </select></div>
+        </div>
+        <div class="btnrow"><button class="gbtn" style="flex:1" onclick="genPrashna(false)">✧ Cast &amp; Predict</button><button class="abtn" onclick="genPrashna(true)">🔊 Speak</button></div>
+      </div>
+      <div id="prashnaOut"></div>
+    </div>
+  </div>
+
+  <!-- NAVAMSA -->
+  <div class="panel" id="panel-navamsa">
+    <div class="spanel">
+      <div class="card">
+        <div class="ctitle">Navamsa — D9 Soul Chart</div>
+        <p class="csubtitle">The Navamsa (9th harmonic division) reveals dharma, marriage, spiritual destiny, and the deeper purpose behind the natal chart. Planets strong in both Rashi and Navamsa are especially powerful.</p>
+        <div class="btnrow"><button class="abtn" onclick="genNavamsa(false)">✦ Calculate D9</button><button class="abtn" onclick="genNavamsa(true)">🔊 Speak Reading</button></div>
+        <div id="navamsaOut" style="margin-top:.8rem"><p class="csubtitle">Generate Kundli first</p></div>
+      </div>
+      <div class="card" id="navamsaAICard" style="display:none"><div class="ctitle">Samarthaa's Navamsa Reading</div><div id="navamsaAI"></div></div>
+    </div>
+  </div>
+
+  <!-- SHADBALA -->
+  <div class="panel" id="panel-shadbala">
+    <div class="spanel">
+      <div class="card">
+        <div class="ctitle">Shadbala — Planetary Strength</div>
+        <p class="csubtitle">Shadbala measures six types of planetary strength: Sthana (positional), Dig (directional), Kaala (temporal), Chesta (motional), Naisargika (natural), and Drik (aspectual). Higher Rupas = more powerful planet.</p>
+        <div class="btnrow"><button class="abtn" onclick="genShadbala(false)">✦ Calculate</button><button class="abtn" onclick="genShadbala(true)">🔊 Speak</button></div>
+        <div id="shadOut" style="margin-top:.8rem"><p class="csubtitle">Generate Kundli first</p></div>
+      </div>
+      <div class="card" id="shadAICard" style="display:none"><div class="ctitle">Samarthaa's Shadbala Reading</div><div id="shadAI"></div></div>
+    </div>
+  </div>
+
+  <!-- MUHURTA -->
+  <div class="panel" id="panel-muhurta">
+    <div class="spanel">
+      <div class="card">
+        <div class="ctitle">Muhurta — Auspicious Timing</div>
+        <p class="csubtitle">Muhurta identifies the most auspicious windows for key life actions based on Panchanga, Hora, Nakshatra, and personal chart. Choose your action to find today's best timing.</p>
+        <div class="frow">
+          <div class="fg"><label>Date</label><input type="date" id="muhurtaDate"/></div>
+          <div class="fg"><label>Purpose</label><select id="muhurtaType">
+            <option value="business">Start Business / Sign Contract</option>
+            <option value="travel">Travel &amp; Journey</option>
+            <option value="marriage">Marriage / Engagement</option>
+            <option value="medical">Surgery / Medical Procedure</option>
+            <option value="property">Purchase Property / Vehicle</option>
+            <option value="education">Begin Studies / Exam</option>
+            <option value="spiritual">Pooja / Spiritual Practice</option>
+            <option value="investment">Investment / Finance</option>
+          </select></div>
+        </div>
+        <div class="btnrow"><button class="abtn" onclick="genMuhurta(false)">✦ Find Muhurtas</button><button class="abtn" onclick="genMuhurta(true)">🔊 Speak Best Time</button></div>
+        <div id="muhurtaOut" style="margin-top:.8rem"><p class="csubtitle">Select a date and purpose to find auspicious windows</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONSOLIDATED PREDICTION -->
+  <div class="panel" id="panel-predict">
+    <div class="spanel">
+      <div class="card" style="border-color:rgba(201,150,59,.35);background:rgba(201,150,59,.04)">
+        <div class="ctitle" style="font-size:.78rem">🔮 Consolidated Prediction — All Pillars</div>
+        <p class="csubtitle">Samarthaa synthesises your Birth Chart, Navamsa, Gochara transits, Ashtakavarga, Dasha, Shadbala, Prashna Shastra, and Muhurta into one unified life reading.</p>
+        <div class="frow">
+          <div class="fg"><label>Focus Area</label><select id="predictFocus">
+            <option value="overall">Overall Life Reading</option>
+            <option value="career">Career &amp; Success</option>
+            <option value="relationship">Love &amp; Marriage</option>
+            <option value="health">Health &amp; Longevity</option>
+            <option value="finance">Wealth &amp; Prosperity</option>
+            <option value="spiritual">Spiritual Path &amp; Dharma</option>
+            <option value="nextmonth">Next 3 Months Forecast</option>
+            <option value="nextyear">Year Ahead Forecast</option>
+          </select></div>
+          <div class="fg"><label>Depth</label><select id="predictDepth">
+            <option value="summary">Summary (2 min)</option>
+            <option value="detailed" selected>Detailed (5 min)</option>
+            <option value="deep">Deep Dive (10 min)</option>
+          </select></div>
+        </div>
+        <div class="btnrow">
+          <button class="gbtn" style="flex:1" onclick="genPredict(false)">🔮 Generate Full Prediction</button>
+          <button class="abtn" onclick="genPredict(true)">🔊 Speak</button>
+        </div>
+      </div>
+      <div id="predictOut"></div>
+    </div>
+  </div>
+
+  </main>
+</div>
+
+<!-- Settings -->
+<div class="overlay" id="settingsOverlay" onclick="if(event.target===this)closeSettings()">
+  <div class="modal">
+    <div class="modal-drag"></div>
+    <button class="mcl" onclick="closeSettings()">✕</button>
+    <h2>⚙ Oracle Configuration</h2>
+    <div class="slabel">Your Birth Details</div>
+    <div class="frow">
+      <div class="fg"><label>Your Name</label><input id="cfgName" placeholder="e.g. Arjun"/></div>
+      <div class="fg"><label>Gender</label><select id="cfgGender"><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option></select></div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label>Date of Birth</label><input type="date" id="cfgDob" value="1990-01-15"/></div>
+      <div class="fg"><label>Time of Birth</label><input type="time" id="cfgTob" value="06:30"/></div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label>Birth City</label><input id="cfgCity" placeholder="e.g. Mumbai"/></div>
+      <div class="fg"><label>Country</label><input id="cfgCountry" value="India"/></div>
+    </div>
+    <div class="slabel">ElevenLabs Voice</div>
+    <div class="fg" style="margin-bottom:.65rem"><label>API Key</label><input type="password" id="cfgKey" placeholder="sk_..."/></div>
+    <div class="frow">
+      <div class="fg"><label>Voice ID</label><input id="cfgVid" placeholder="Voice ID"/></div>
+      <div class="fg"><label>Model</label><select id="cfgMod">
+        <option value="eleven_multilingual_v2">Multilingual v2</option>
+        <option value="eleven_turbo_v2_5">Turbo v2.5</option>
+        <option value="eleven_turbo_v2">Turbo v2</option>
+        <option value="eleven_monolingual_v1">Monolingual v1</option>
+      </select></div>
+    </div>
+    <button class="abtn" style="margin-bottom:.65rem" onclick="testVoice()">▶ Test Voice</button>
+    <div class="slabel">Reading Style</div>
+    <select id="cfgStyle">
+      <option value="modern" selected>Modern Interpretive</option>
+      <option value="traditional">Traditional Vedic (Sanskrit)</option>
+      <option value="spiritual">Spiritual &amp; Devotional</option>
+      <option value="practical">Practical &amp; Life-focused</option>
+    </select>
+    <button class="sbtn" onclick="saveSettings()">✦ Save &amp; Close</button>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+(()=>{const sf=document.getElementById('stars');for(let i=0;i<150;i++){const s=document.createElement('div'),sz=Math.random()*2+.4;s.className='st';s.style.cssText=`width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*100}%;--d:${2+Math.random()*5}s;--dl:${Math.random()*6}s;--lo:${.1+Math.random()*.28}`;sf.appendChild(s)}})();
+
+const S={name:'',dob:'1990-01-15',tob:'06:30',city:'',country:'India',gender:'male',
+  elKey:'6c9695f8f81ba4e7cbec96cdb2d6176b1101a98f3906c914b6c0c62652fd8bba',
+  voiceId:'Z7S9OyOUUcvsWJmc8FSQ',model:'eleven_multilingual_v2',style:'modern',
+  chartData:null,chatHistory:[],ashtakScores:null,shadData:null};
+
+const SIGNS=['Aries','Taurus','Gemini','Cancer','Leo','Virgo','Libra','Scorpio','Sagittarius','Capricorn','Aquarius','Pisces'];
+const SSKT=['Mesha','Vrishabha','Mithuna','Karka','Simha','Kanya','Tula','Vrishchika','Dhanu','Makara','Kumbha','Meena'];
+const NAK=['Ashwini','Bharani','Krittika','Rohini','Mrigashira','Ardra','Punarvasu','Pushya','Ashlesha','Magha','Purva Phalguni','Uttara Phalguni','Hasta','Chitra','Swati','Vishakha','Anuradha','Jyeshtha','Mula','Purva Ashadha','Uttara Ashadha','Shravana','Dhanishtha','Shatabhisha','Purva Bhadrapada','Uttara Bhadrapada','Revati'];
+const DSEQ=[{n:'Ketu',y:7,g:'☋'},{n:'Venus',y:20,g:'♀'},{n:'Sun',y:6,g:'☉'},{n:'Moon',y:10,g:'☽'},{n:'Mars',y:7,g:'♂'},{n:'Rahu',y:18,g:'☊'},{n:'Jupiter',y:16,g:'♃'},{n:'Saturn',y:19,g:'♄'},{n:'Mercury',y:17,g:'☿'}];
+const HOUSE_MEANINGS=['Self & Personality','Wealth & Family','Siblings & Courage','Home & Mother','Intelligence & Children','Health & Enemies','Spouse & Partnerships','Longevity & Transformation','Fortune & Higher Learning','Career & Status','Gains & Social Circle','Loss & Liberation'];
+const PLANET_DEFS=[{n:'Sun',g:'☉'},{n:'Moon',g:'☽'},{n:'Mars',g:'♂'},{n:'Mercury',g:'☿'},{n:'Jupiter',g:'♃'},{n:'Venus',g:'♀'},{n:'Saturn',g:'♄'}];
+const ALL_TABS=['oracle','kundli','horo','transit','compat','dasha','ashtak','prashna','navamsa','shadbala','muhurta','predict'];
+
+// Scroll active tab into view
+function switchTab(id){
+  ALL_TABS.forEach((t,i)=>{document.querySelectorAll('.tab')[i]?.classList.toggle('on',t===id)});
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  document.getElementById('panel-'+id)?.classList.add('on');
+  const btn=document.querySelectorAll('.tab')[ALL_TABS.indexOf(id)];
+  btn?.scrollIntoView({inline:'center',behavior:'smooth',block:'nearest'});
+}
+
+// Settings
+function openSettings(){
+  document.getElementById('settingsOverlay').classList.add('on');
+  document.body.style.overflow='hidden';
+  const map={Name:'name',Dob:'dob',Tob:'tob',City:'city',Country:'country',Gender:'gender',Key:'elKey',Vid:'voiceId',Mod:'model',Style:'style'};
+  Object.entries(map).forEach(([k,v])=>{const el=document.getElementById('cfg'+k);if(el)el.value=S[v]||''});
+}
+function closeSettings(){document.getElementById('settingsOverlay').classList.remove('on');document.body.style.overflow=''}
+function saveSettings(){
+  const map={Name:'name',Dob:'dob',Tob:'tob',City:'city',Country:'country',Gender:'gender',Key:'elKey',Vid:'voiceId',Mod:'model',Style:'style'};
+  Object.entries(map).forEach(([k,v])=>{const el=document.getElementById('cfg'+k);if(el)S[v]=el.value.trim()});
+  const ok=S.name&&S.dob&&S.elKey&&S.voiceId;
+  document.getElementById('cfgDot').className='dot'+(ok?' ok':'');
+  document.getElementById('cfgLbl').textContent=S.name||'Setup';
+  closeSettings();toast('✦ Settings saved');
+}
+function testVoice(){
+  ['Key','Vid','Mod'].forEach(k=>{const el=document.getElementById('cfg'+k);if(el){if(k==='Key')S.elKey=el.value.trim();else if(k==='Vid')S.voiceId=el.value.trim();else S.model=el.value}});
+  speak('Om. I am Samarthaa, your Vedic oracle. The stars are aligned and I am ready to illuminate your path.');
+}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('on');setTimeout(()=>t.classList.remove('on'),3000)}
+
+// Voice state
+function setVS(st){
+  const lbl=document.getElementById('slbl'),wave=document.getElementById('wanim'),mic=document.getElementById('micbtn');
+  if(st==='idle'){lbl.textContent='Ready';lbl.className='slbl idle';wave.style.display='none';mic.className='micbtn'}
+  else if(st==='listening'){lbl.textContent='Listening…';lbl.className='slbl';wave.style.display='flex';mic.className='micbtn rec'}
+  else if(st==='thinking'){lbl.textContent='Thinking…';lbl.className='slbl';wave.style.display='flex';mic.className='micbtn'}
+  else if(st==='speaking'){lbl.textContent='Speaking…';lbl.className='slbl';wave.style.display='flex';mic.className='micbtn spk'}
+}
+let curAudio=null;
+async function speak(text){
+  if(!S.elKey||!S.voiceId){toast('Add ElevenLabs key in Setup');return}
+  setVS('speaking');
+  try{
+    const r=await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${S.voiceId}`,{
+      method:'POST',headers:{'xi-api-key':S.elKey,'Content-Type':'application/json'},
+      body:JSON.stringify({text,model_id:S.model||'eleven_multilingual_v2',voice_settings:{stability:.65,similarity_boost:.82,style:.3,use_speaker_boost:true}})
+    });
+    if(!r.ok){const e=await r.text();console.error(e);setVS('idle');toast('Voice error — check API key');return}
+    const blob=await r.blob();const url=URL.createObjectURL(blob);
+    if(curAudio){curAudio.pause();try{URL.revokeObjectURL(curAudio._url)}catch(e){}}
+    curAudio=new Audio(url);curAudio._url=url;curAudio.play();
+    curAudio.onended=()=>setVS('idle');
+  }catch(e){console.error(e);setVS('idle');toast('ElevenLabs connection failed')}
+}
+let SR=null,isRec=false;
+if('webkitSpeechRecognition'in window||'SpeechRecognition'in window){
+  const Rc=window.SpeechRecognition||window.webkitSpeechRecognition;
+  SR=new Rc();SR.lang='en-IN';SR.continuous=false;SR.interimResults=false;
+  SR.onresult=e=>{const t=e.results[0][0].transcript;document.getElementById('userInput').value=t;isRec=false;setVS('thinking');setTimeout(sendMsg,200)};
+  SR.onerror=()=>{isRec=false;setVS('idle');toast('Voice not recognised — try again')};
+  SR.onend=()=>{if(isRec){isRec=false;setVS('idle')}};
+}
+function toggleMic(){
+  if(!SR){toast('Voice input: use Chrome or Edge');return}
+  if(!isRec){SR.start();isRec=true;setVS('listening')}else{SR.stop();isRec=false;setVS('idle')}
+}
+function addMsg(role,text){
+  const w=document.getElementById('chatWrap'),em=document.getElementById('chatEmpty');if(em)em.remove();
+  const d=document.createElement('div');d.className=`msg ${role}`;
+  d.innerHTML=`<div class="av">${role==='oracle'?'☽':'✦'}</div><div class="bubble">${text}</div>`;
+  w.appendChild(d);w.scrollTop=w.scrollHeight;
+}
+function addTyping(){
+  const w=document.getElementById('chatWrap'),em=document.getElementById('chatEmpty');if(em)em.remove();
+  const d=document.createElement('div');d.className='msg oracle';d.id='typing';
+  d.innerHTML=`<div class="av">☽</div><div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>`;
+  w.appendChild(d);w.scrollTop=w.scrollHeight;
+}
+async function sendMsg(){
+  const inp=document.getElementById('userInput'),q=inp.value.trim();if(!q)return;inp.value='';
+  addMsg('user',q);S.chatHistory.push({role:'user',content:q});setVS('thinking');addTyping();
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:900,system:buildSys(),messages:S.chatHistory.slice(-14)})});
+    const d=await r.json();const ans=d.content?.[0]?.text||'The stars are silent. Please try again.';
+    document.getElementById('typing')?.remove();addMsg('oracle',ans);S.chatHistory.push({role:'assistant',content:ans});await speak(ans);
+  }catch(e){document.getElementById('typing')?.remove();addMsg('oracle','The cosmos is veiled. Check your connection.');setVS('idle')}
+}
+function buildSys(){
+  const sm={modern:'Blend Vedic wisdom with clear accessible language.',traditional:'Use Sanskrit Vedic terminology — Rashi, Nakshatra, Graha, Bhava, Yoga, Dasha.',spiritual:'Speak from a spiritual, devotional perspective. Reference karma, dharma, soul journey.',practical:'Focus on practical actionable life guidance — career, relationships, health, decisions.'};
+  const birth=S.dob?`Seeker born ${S.dob} at ${S.tob} in ${S.city}, ${S.country}. Name: ${S.name}.`:'No birth details yet.';
+  const ch=S.chartData?`Chart: Asc ${S.chartData.ascSign}, Moon ${SIGNS[S.chartData.planets[1].si]} (${S.chartData.moonNak}).`:'';
+  const ash=S.ashtakScores?`Ashtakavarga H1-H12: ${S.ashtakScores.join(',')}.`:'';
+  return `You are Samarthaa, a wise compassionate Vedic astrologer. ${sm[S.style]||sm.modern}\n${birth} ${ch} ${ash}\nGuidelines: Answer Vedic astrology questions. Be warm, insightful, encouraging. Max 180 words. Pure prose only — no markdown, bullets. Suggest mantras, gemstones, remedies when relevant. Free will is paramount.`;
+}
+
+// Chart builder
+function buildChart(dob,tob){
+  const dt=new Date(dob+'T'+(tob||'00:00'));
+  const y=dt.getFullYear(),m=dt.getMonth(),d=dt.getDate(),h=dt.getHours();
+  const doy=Math.floor((dt-new Date(y,0,0))/864e5);
+  const sun=Math.floor(((doy-14+365)%365)/30.4)%12;
+  const moonD=(y*365+m*30+d)+h/24;
+  const moon=Math.floor(moonD/2.25)%12;
+  const asc=(Math.floor(h/2)+sun+1)%12;
+  const mars=Math.abs(Math.floor((y-1990)*.53+m*.044))%12;
+  const mercury=(sun+(m%3)-1+12)%12;
+  const jupiter=Math.abs(Math.floor((y-1990)))%12;
+  const venus=(sun+(m%4))%12;
+  const saturn=Math.abs(Math.floor((y-1990)/2.5))%12;
+  const rahu=(12-Math.abs(Math.floor((y-1990)*.53))%12+12)%12;
+  const ketu=(rahu+6)%12;
+  const moonNak=NAK[Math.floor(moon*27/12)%27];
+  return{asc,ascSign:SIGNS[asc],ascSkt:SSKT[asc],moonNak,moonNakIdx:Math.max(0,NAK.indexOf(moonNak)),
+    planets:[{n:'Sun',g:'☉',si:sun,h:(sun-asc+12)%12+1},{n:'Moon',g:'☽',si:moon,h:(moon-asc+12)%12+1},
+      {n:'Mars',g:'♂',si:mars,h:(mars-asc+12)%12+1},{n:'Mercury',g:'☿',si:mercury,h:(mercury-asc+12)%12+1},
+      {n:'Jupiter',g:'♃',si:jupiter,h:(jupiter-asc+12)%12+1},{n:'Venus',g:'♀',si:venus,h:(venus-asc+12)%12+1},
+      {n:'Saturn',g:'♄',si:saturn,h:(saturn-asc+12)%12+1},{n:'Rahu',g:'☊',si:rahu,h:(rahu-asc+12)%12+1},
+      {n:'Ketu',g:'☋',si:ketu,h:(ketu-asc+12)%12+1}]};
+}
+
+// Kundli
+function genKundli(){
+  if(!S.dob){toast('Enter birth details in Setup');return}
+  S.chartData=buildChart(S.dob,S.tob);
+  renderKundliGrid(S.chartData);renderPlanetTable(S.chartData);renderYogas(S.chartData);toast('✦ Kundli generated');
+}
+async function speakKundli(){
+  if(!S.chartData)genKundli();
+  const c=S.chartData;
+  await speak(`Your Vedic birth chart shows ${S.name||'you'} with ${c.ascSign} ascendant, Moon in ${SIGNS[c.planets[1].si]}, the ${c.moonNak} nakshatra, and Sun in ${SIGNS[c.planets[0].si]}. Jupiter resides in ${SIGNS[c.planets[4].si]}, shaping your wisdom and expansion.`);
+}
+function renderKundliGrid(c){
+  const pbh={};c.planets.forEach(p=>{if(!pbh[p.h])pbh[p.h]=[];pbh[p.h].push(p.g)});
+  const layout=[[null,12,1,2,null],[11,null,null,null,3],[10,null,'C',null,4],[9,null,null,null,5],[null,8,7,6,null]];
+  let html='<div class="kgrid">';
+  layout.forEach(row=>row.forEach(cell=>{
+    if(cell===null)html+='<div class="kc" style="background:rgba(0,0,0,.6);border-color:rgba(201,150,59,.04)"></div>';
+    else if(cell==='C')html+=`<div class="kc ctr"><span style="font-family:'Cinzel',serif;font-size:.5rem;color:rgba(201,150,59,.42)">Asc</span><span class="ksg">${c.ascSkt}</span></div>`;
+    else{const pl=(pbh[cell]||[]).join(' ');html+=`<div class="kc${cell===1?' asc-c':''}"><span class="khn">${cell}</span><span class="kpl">${pl}</span></div>`}
+  }));
+  html+='</div><p style="text-align:center;font-size:.72rem;color:var(--sw);font-style:italic">Ascendant: '+c.ascSign+' · Moon Nakshatra: '+c.moonNak+'</p>';
+  document.getElementById('kundliOut').innerHTML=html;
+}
+function renderPlanetTable(c){
+  let html='<div style="overflow-x:auto"><table class="ptable"><thead><tr><th></th><th>Graha</th><th>Rashi</th><th>Bhava</th></tr></thead><tbody>';
+  c.planets.forEach(p=>{html+=`<tr><td class="glyph">${p.g}</td><td>${p.n}</td><td>${SSKT[p.si]} <small style="color:var(--sw)">(${SIGNS[p.si]})</small></td><td>${p.h}</td></tr>`});
+  html+='</tbody></table></div>';
+  document.getElementById('planetOut').innerHTML=html;document.getElementById('pcardEl').style.display='block';
+}
+const YRULES=[
+  {name:'Budhaditya Yoga',test:c=>c.planets[0].h===c.planets[3].h,effect:'Keen intellect and communicative brilliance — Mercury conjunct Sun enhances wit.'},
+  {name:'Gaja Kesari Yoga',test:c=>{const j=c.planets[4].h,mo=c.planets[1].h;return[1,4,7,10].includes(((j-mo+12)%12)+1)||j===mo},effect:'Wealth, reputation, noble character — Jupiter aspecting Moon brings prosperity.'},
+  {name:'Chandra Mangala Yoga',test:c=>c.planets[1].h===c.planets[2].h,effect:'Courage, ambition, financial acumen — Moon and Mars together create determination.'},
+  {name:'Malavya Yoga',test:c=>[1,4,7,10].includes(c.planets[5].h)&&[0,5,6].includes(c.planets[5].si),effect:'Venus in Kendra brings beauty, luxury, artistic gifts, and harmony.'},
+  {name:'Hamsa Yoga',test:c=>[1,4,7,10].includes(c.planets[4].h)&&[8,11,5].includes(c.planets[4].si),effect:'Jupiter in Kendra in own sign — divine grace, wisdom, and righteousness.'},
+  {name:'Neecha Bhanga Raja Yoga',test:c=>{const dep=[9,3,1,10,9,5,0,0,0];return c.planets.slice(0,7).some((p,i)=>p.si===dep[i])},effect:'A debilitated planet cancels its own weakness and confers sudden rise in life.'},
+];
+function renderYogas(c){
+  const found=YRULES.filter(y=>y.test(c));
+  let html=found.length?'':'<p class="csubtitle">No major pancha mahapurusha yogas detected.</p>';
+  found.forEach(y=>{html+=`<div class="ibox amber" style="margin-bottom:.55rem"><div class="ibox-title">${y.name}</div><p>${y.effect}</p></div>`});
+  document.getElementById('yogaOut').innerHTML=html;document.getElementById('yogaCardEl').style.display='block';
+}
+
+// Horoscope
+async function genHoroscope(doSpeak){
+  const de=document.getElementById('horoDate');if(!de.value)de.value=new Date().toISOString().split('T')[0];
+  if(!S.dob){toast('Enter birth details in Setup');return}
+  if(!S.chartData)S.chartData=buildChart(S.dob,S.tob);
+  document.getElementById('horoOut').innerHTML='<div class="typing" style="padding:.4rem 0"><span></span><span></span><span></span></div>';
+  const date=de.value;const tc=buildChart(date,'12:00');
+  const prompt=`Vedic daily horoscope for ${S.name||'the seeker'} on ${date}. Natal: Asc ${S.chartData.ascSign}, Moon ${SIGNS[S.chartData.planets[1].si]}, nakshatra ${S.chartData.moonNak}. Today: Sun ${SIGNS[tc.planets[0].si]}, Moon ${SIGNS[tc.planets[1].si]}, Jupiter ${SIGNS[tc.planets[4].si]}, Saturn ${SIGNS[tc.planets[6].si]}.
+Return ONLY valid JSON no markdown: {"overall":"2 sentences","lucky_number":7,"lucky_color":"Saffron","lucky_time":"9am-11am","sections":[{"title":"Health","body":"2 sentences","score":72},{"title":"Career","body":"2 sentences","score":68},{"title":"Love","body":"2 sentences","score":75},{"title":"Wealth","body":"2 sentences","score":65},{"title":"Spiritual","body":"2 sentences","score":80}],"remedy":"one remedy","mantra":"short mantra"}`;
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,system:'Respond ONLY with valid JSON. No markdown.',messages:[{role:'user',content:prompt}]})});
+    const d=await r.json();let txt=d.content?.[0]?.text||'{}';txt=txt.replace(/```json|```/g,'').trim();
+    let h;try{h=JSON.parse(txt)}catch(e){h=null}
+    if(!h){document.getElementById('horoOut').innerHTML='<p class="csubtitle">Could not parse horoscope. Try again.</p>';return}
+    renderHoroscope(h,doSpeak);
+  }catch(e){document.getElementById('horoOut').innerHTML='<p class="csubtitle">Error fetching horoscope.</p>'}
+}
+function renderHoroscope(h,doSpeak){
+  let html=`<div class="ibox amber"><p>${h.overall}</p><div style="display:flex;gap:.9rem;margin-top:.5rem;flex-wrap:wrap;font-size:.72rem;color:var(--sw)"><span>🔢 <strong style="color:var(--gl)">${h.lucky_number}</strong></span><span>🎨 <strong style="color:var(--gl)">${h.lucky_color}</strong></span><span>⏰ <strong style="color:var(--gl)">${h.lucky_time}</strong></span></div></div>`;
+  (h.sections||[]).forEach(s=>{html+=`<div class="hsec"><h3>${s.title}</h3><p>${s.body}</p><div class="hmeter"><span class="hml">Energy</span><div class="htrack"><div class="hfill" style="width:${s.score}%"></div></div><span class="hnum">${s.score}%</span></div></div>`});
+  if(h.remedy)html+=`<div class="ibox green"><div class="ibox-title">TODAY'S REMEDY</div><p>${h.remedy}</p></div>`;
+  if(h.mantra)html+=`<div class="ibox amber"><div class="ibox-title">MANTRA</div><p style="font-family:'Space Mono',monospace;font-size:.78rem;color:var(--gl)">${h.mantra}</p></div>`;
+  document.getElementById('horoOut').innerHTML=html;
+  if(doSpeak)speak(`${h.overall} For health: ${(h.sections[0]||{}).body||''} For career: ${(h.sections[1]||{}).body||''} Remedy: ${h.remedy||''} Mantra: ${h.mantra||''}`);
+}
+
+// Transits
+async function genTransits(doSpeak){
+  if(!S.dob){toast('Enter birth details in Setup');return}
+  if(!S.chartData)S.chartData=buildChart(S.dob,S.tob);
+  document.getElementById('transitOut').innerHTML='<div class="typing" style="padding:.4rem 0"><span></span><span></span><span></span></div>';
+  const now=new Date();const tc=buildChart(now.toISOString().split('T')[0],'12:00');
+  const natal=S.chartData.planets.map(p=>`${p.n} H${p.h}/${SIGNS[p.si]}`).join(', ');
+  const today=tc.planets.slice(0,7).map(p=>`${p.n} in ${SIGNS[p.si]}`).join(', ');
+  const prompt=`Vedic transit analysis for ${S.name||'seeker'} today ${now.toDateString()}. Natal: ${natal}. Asc: ${S.chartData.ascSign}. Today: ${today}. Return ONLY valid JSON array no markdown: [{"planet":"Saturn","glyph":"♄","title":"short title","body":"2 sentences","date":"period active"},{"planet":"Jupiter","glyph":"♃","title":"..","body":"..","date":".."},{"planet":"Mars","glyph":"♂","title":"..","body":"..","date":".."},{"planet":"Venus","glyph":"♀","title":"..","body":"..","date":".."},{"planet":"Rahu","glyph":"☊","title":"..","body":"..","date":".."}]`;
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,system:'Respond ONLY with valid JSON array. No markdown.',messages:[{role:'user',content:prompt}]})});
+    const d=await r.json();let txt=d.content?.[0]?.text||'[]';txt=txt.replace(/```json|```/g,'').trim();
+    let tr;try{tr=JSON.parse(txt)}catch(e){tr=null}
+    if(!tr||!tr.length){document.getElementById('transitOut').innerHTML='<p class="csubtitle">Parse error. Try again.</p>';return}
+    let html='',spoken='Current transits. ';
+    tr.forEach(t=>{html+=`<div class="trow"><div class="tg">${t.glyph||'★'}</div><div><div class="tit">${t.planet} — ${t.title}</div><div class="tbd">${t.body}</div><div class="tdt">${t.date}</div></div></div>`;spoken+=`${t.planet}: ${t.body} `});
+    document.getElementById('transitOut').innerHTML=html;if(doSpeak)speak(spoken);
+  }catch(e){document.getElementById('transitOut').innerHTML='<p class="csubtitle">Error fetching transits.</p>'}
+}
+
+// Synastry
+async function genSynastry(doSpeak){
+  if(!S.dob){toast('Enter your birth details');return}
+  const p2d=document.getElementById('p2Dob').value;if(!p2d){toast('Enter partner birth date');return}
+  if(!S.chartData)S.chartData=buildChart(S.dob,S.tob);
+  const p2n=document.getElementById('p2Name').value||'Partner';
+  const p2c=buildChart(p2d,document.getElementById('p2Tob').value);
+  document.getElementById('compatOut').innerHTML='<div class="card"><div class="typing" style="padding:.4rem 0"><span></span><span></span><span></span></div></div>';
+  const prompt=`Vedic compatibility for Person 1 (${S.name||'Seeker'}): Asc ${S.chartData.ascSign}, Moon ${SIGNS[S.chartData.planets[1].si]}, nakshatra ${S.chartData.moonNak}. Person 2 (${p2n}): Asc ${p2c.ascSign}, Moon ${SIGNS[p2c.planets[1].si]}, nakshatra ${p2c.moonNak}. Return ONLY valid JSON no markdown: {"score":72,"summary":"3 sentences","kutas":[{"name":"Varna","max":1,"score":1},{"name":"Vashya","max":2,"score":2},{"name":"Tara","max":3,"score":2},{"name":"Yoni","max":4,"score":3},{"name":"Graha Maitri","max":5,"score":4},{"name":"Gana","max":6,"score":5},{"name":"Bhakoot","max":7,"score":5},{"name":"Nadi","max":8,"score":7}],"strengths":"key strengths","challenges":"key challenges","verdict":"one sentence"}`;
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:700,system:'Respond ONLY with valid JSON. No markdown.',messages:[{role:'user',content:prompt}]})});
+    const d=await r.json();let txt=d.content?.[0]?.text||'{}';txt=txt.replace(/```json|```/g,'').trim();
+    let co;try{co=JSON.parse(txt)}catch(e){co=null}
+    if(!co){document.getElementById('compatOut').innerHTML='<div class="card"><p class="csubtitle">Parse error. Try again.</p></div>';return}
+    const sc=Math.min(100,Math.max(0,co.score||72));
+    const circ=2*Math.PI*38,filled=circ*(sc/100);
+    const col=sc>=75?'#4caf85':sc>=50?'#c9963b':'#c94040';
+    let html=`<div class="card"><div class="ctitle">Ashtakoot — ${S.name||'You'} & ${p2n}</div>
+    <div class="sring"><svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="38" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="7"/><circle cx="40" cy="40" r="38" fill="none" stroke="${col}" stroke-width="7" stroke-dasharray="${filled.toFixed(1)} ${circ.toFixed(1)}" stroke-linecap="round"/></svg><div><div class="snum">${sc}</div><div class="slbr">/100</div></div></div>
+    <p style="text-align:center;font-size:.84rem;color:var(--sw);font-style:italic;margin-bottom:.8rem;line-height:1.55">${co.summary||''}</p>`;
+    if(co.kutas)co.kutas.forEach(k=>{const p=(k.score/k.max*100).toFixed(0);html+=`<div class="krow"><span class="kname">${k.name}</span><div class="ktrack"><div class="kfill" style="width:${p}%"></div></div><span class="kscore">${k.score}/${k.max}</span></div>`});
+    if(co.strengths)html+=`<div class="ibox green" style="margin-top:.7rem"><div class="ibox-title">STRENGTHS</div><p>${co.strengths}</p></div>`;
+    if(co.challenges)html+=`<div class="ibox red"><div class="ibox-title">CHALLENGES</div><p>${co.challenges}</p></div>`;
+    if(co.verdict)html+=`<div style="text-align:center;font-family:'Cinzel',serif;font-size:.82rem;color:var(--gl);padding:.5rem;border:1px solid rgba(201,150,59,.18);border-radius:8px;margin-top:.65rem">${co.verdict}</div>`;
+    html+='</div>';document.getElementById('compatOut').innerHTML=html;
+    if(doSpeak)speak(`${S.name||'You'} and ${p2n} score ${sc} out of 100. ${co.summary} ${co.verdict||''}`);
+  }catch(e){document.getElementById('compatOut').innerHTML='<div class="card"><p class="csubtitle">Error.</p></div>'}
+}
+
+// Dasha
+function genDasha(doSpeak){
+  if(!S.dob){toast('Enter birth details');return}
+  if(!S.chartData)S.chartData=buildChart(S.dob,S.tob);
+  const bd=new Date(S.dob+'T'+(S.tob||'00:00'));
+  const now=new Date(),age=(now-bd)/(1000*60*60*24*365.25);
+  const si=S.chartData.moonNakIdx%9;let cum=0,html='',curName='',curRem=0;
+  for(let i=0;i<9;i++){
+    const pl=DSEQ[(si+i)%9];const s=cum,e=cum+pl.y;
+    const cur=age>=s&&age<e;const prog=cur?Math.min(100,(age-s)/pl.y*100):age>=e?100:0;
+    const sy=new Date(bd);sy.setFullYear(sy.getFullYear()+Math.floor(s));
+    const ey=new Date(bd);ey.setFullYear(ey.getFullYear()+Math.floor(e));
+    if(cur){curName=pl.n;curRem=(e-age).toFixed(1)}
+    html+=`<div class="dbar${cur?' cur':''}"><div class="dpic">${pl.g}</div><div class="dinf"><div class="dname">${pl.n} Mahadasha${cur?`<span class="cbadge">◆ NOW</span>`:''}</div><div class="dper">${sy.getFullYear()} – ${ey.getFullYear()} · ${pl.y} yrs</div><div class="dtrk"><div class="dfl" style="width:${prog.toFixed(0)}%"></div></div></div></div>`;
+    cum=e;
+  }
+  document.getElementById('dashaOut').innerHTML=html;
+  if(doSpeak&&curName)speak(`You are in your ${curName} Mahadasha with ${curRem} years remaining. This planetary period shapes your life themes and karmic lessons.`);
+}
+
+// Ashtakavarga
+function calcAshtak(chart){
+  const scores=Array(12).fill(0);
+  const bav=PLANET_DEFS.map((pd,pi)=>{
+    const ph=chart.planets[pi].h-1;
+    const row=Array(12).fill(0).map((_,hi)=>{const dist=(hi-ph+12)%12;return[0,1,2,3,4,7,8].includes(dist)?1:0});
+    row.forEach((v,hi)=>{scores[hi]+=v});return row;
+  });
+  const maxR=Math.max(...scores)||1;
+  return{scores:scores.map(s=>Math.round(15+(s/maxR)*27)),bav};
+}
+function genAshtak(doSpeak){
+  if(!S.dob){toast('Enter birth details');return}
+  if(!S.chartData)S.chartData=buildChart(S.dob,S.tob);
+  const{scores,bav}=calcAshtak(S.chartData);S.ashtakScores=scores;
+  let html='<div class="avg-grid">';
+  scores.forEach((sc,i)=>{const strong=sc>=28,weak=sc<=24;const pct=Math.round((sc/42)*100);const fc=strong?'#4caf85':weak?'#e06060':'#c9963b';
+    html+=`<div class="avg-cell${strong?' strong':weak?' weak':''}"><div class="avg-house">H${i+1}</div><div class="avg-sign">${SSKT[i]}</div><div class="avg-score">${sc}</div><div class="avg-bar"><div class="avg-fill" style="width:${pct}%;background:${fc}"></div></div></div>`;
+  });
+  html+='</div><div style="font-family:\'Cinzel\',serif;font-size:.64rem;color:var(--gold);letter-spacing:.06em;margin-bottom:.4rem">BINNASHTAKAVARGA</div>';
+  PLANET_DEFS.forEach((pl,pi)=>{
+    html+=`<div class="pra-row"><span class="pra-glyph">${pl.g}</span><span class="pra-name">${pl.n}</span><div class="pra-bars">`;
+    bav[pi].forEach(v=>{const bg=v?'rgba(76,175,133,.2)':'rgba(200,80,80,.13)';const tc=v?'#4caf85':'#a05050';html+=`<div class="pra-bar" style="background:${bg};color:${tc}">${v}</div>`});
+    html+=`</div></div>`;
+  });
+  document.getElementById('ashtakGrid').innerHTML=html;
+  const strong=scores.map((s,i)=>s>=28?'H'+(i+1):null).filter(Boolean);
+  const weak=scores.map((s,i)=>s<=24?'H'+(i+1):null).filter(Boolean);
+  let intHtml='';
+  scores.forEach((sc,i)=>{const col=sc>=28?'rgba(76,200,133,.72)':sc<=24?'rgba(220,100,100,.68)':'var(--gold)';
+    const desc=sc>=28?'Strong — natural blessings':sc<=24?'Weak — apply remedies':'Moderate — timing dependent';
+    intHtml+=`<div style="display:flex;align-items:flex-start;gap:.55rem;padding:.38rem .48rem;border-bottom:1px solid rgba(255,255,255,.04)"><div style="min-width:22px;font-family:'Cinzel',serif;font-size:.66rem;color:${col};padding-top:.06rem">H${i+1}</div><div style="flex:1"><div style="font-size:.76rem;color:var(--iv)">${HOUSE_MEANINGS[i]}</div><div style="font-size:.68rem;color:var(--sw);font-style:italic">${desc}</div></div><div style="font-family:'Space Mono',monospace;font-size:.8rem;color:${col}">${sc}</div></div>`;
+  });
+  document.getElementById('ashtakInt').innerHTML=intHtml;document.getElementById('ashtakIntCard').style.display='block';
+  genAshtakAI(scores,strong,weak,doSpeak);
+}
+async function genAshtakAI(scores,strong,weak,doSpeak){
+  document.getElementById('ashtakAICard').style.display='block';
+  document.getElementById('ashtakAI').innerHTML='<div class="typing" style="padding:.4rem 0"><span></span><span></span><span></span></div>';
+  const c=S.chartData;
+  const prompt=`Ashtakavarga reading for ${S.name||'seeker'}. Asc: ${c.ascSign}. Moon Nakshatra: ${c.moonNak}. Sarvashtakavarga H1-H12: ${scores.join(',')}. Strong (28+): ${strong.join(',')||'none'}. Weak (24-): ${weak.join(',')||'none'}. Flowing prose interpretation 220 words — overall life strength, strong house gifts, weak house warnings with specific remedies, timing advice, one gemstone or mantra.`;
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:900,system:'You are Samarthaa. Flowing prose only. No markdown, no bullets.',messages:[{role:'user',content:prompt}]})});
+    const d=await r.json();const txt=d.content?.[0]?.text||'Reading unavailable.';
+    document.getElementById('ashtakAI').innerHTML=`<p style="font-size:.88rem;line-height:1.7;color:var(--iv);font-style:italic">${txt}</p>`;
+    if(doSpeak)speak(txt);
+  }catch(e){document.getElementById('ashtakAI').innerHTML='<p class="csubtitle">Error.</p>'}
+}
+
+// Prashna
+const WEEKDAYS_P=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const DAY_LORDS=['Sun','Moon','Mars','Mercury','Jupiter','Venus','Saturn'];
+const HORA_SEQ=['Sun','Venus','Mercury','Moon','Saturn','Jupiter','Mars'];
+const TITHI_NAMES=['Pratipada','Dwitiya','Tritiya','Chaturthi','Panchami','Shashthi','Saptami','Ashtami','Navami','Dashami','Ekadashi','Dwadashi','Trayodashi','Chaturdashi','Purnima'];
+const YOGA_NAMES_P=['Vishkambha','Priti','Ayushman','Saubhagya','Shobhana','Atiganda','Sukarman','Dhriti','Shula','Ganda','Vriddhi','Dhruva','Vyaghata','Harshana','Vajra','Siddhi','Vyatipata','Variyan','Parigha','Shiva','Siddha','Sadhya','Shubha','Shukla','Brahma','Indra','Vaidhriti'];
+const AUSP_YOGA=['Priti','Ayushman','Saubhagya','Shobhana','Vriddhi','Siddhi','Shiva','Siddha','Shubha','Brahma','Indra'];
+const INAUSP_YOGA=['Vishkambha','Atiganda','Shula','Ganda','Vyaghata','Vajra','Vyatipata','Parigha','Vaidhriti'];
+const NAK_Q={'Ashwini':'auspicious','Bharani':'inauspicious','Krittika':'mixed','Rohini':'auspicious','Mrigashira':'auspicious','Ardra':'inauspicious','Punarvasu':'auspicious','Pushya':'auspicious','Ashlesha':'inauspicious','Magha':'mixed','Purva Phalguni':'mixed','Uttara Phalguni':'auspicious','Hasta':'auspicious','Chitra':'mixed','Swati':'auspicious','Vishakha':'mixed','Anuradha':'auspicious','Jyeshtha':'inauspicious','Mula':'inauspicious','Purva Ashadha':'mixed','Uttara Ashadha':'auspicious','Shravana':'auspicious','Dhanishtha':'mixed','Shatabhisha':'inauspicious','Purva Bhadrapada':'inauspicious','Uttara Bhadrapada':'auspicious','Revati':'auspicious'};
+const DIR_Q={East:'auspicious',Northeast:'auspicious',North:'auspicious',Northwest:'mixed',West:'neutral',Southwest:'inauspicious',South:'inauspicious',Southeast:'mixed'};
+const SHAKUNA_DB={cat:'mixed — unexpected twist expected',crow:'inauspicious — obstacles and delays',cuckoo:'auspicious — joy and fulfilment indicated',peacock:'auspicious — victory and divine favour',dog:'mixed — loyalty present, watch for opposition',cow:'auspicious — abundance and wish-fulfilment',snake:'inauspicious — delays and hidden challenges',elephant:'auspicious — Ganesha blesses; obstacles removed',flower:'auspicious — beauty and sweet outcomes',bird:'auspicious — swift positive news incoming',fire:'mixed — transformation; something old ends',water:'auspicious — flow, abundance, positive emotions',jasmine:'auspicious — purity and divine blessing',rain:'auspicious — abundance and nourishment',thunder:'inauspicious — sudden upheaval',rainbow:'auspicious — hope fulfilled after patience'};
+function getPanchanga(dt){
+  const dow=dt.getDay();const dayLord=DAY_LORDS[dow];const h=dt.getHours();
+  const dlIdx=HORA_SEQ.indexOf(dayLord);const horaLord=HORA_SEQ[(dlIdx+h)%7];
+  const seed=dt.getFullYear()*365+dt.getMonth()*30+dt.getDate()+h/24;
+  const nak=NAK[Math.floor(seed*1.3)%27];
+  return{dow,dayLord,horaLord,tithi:TITHI_NAMES[Math.floor(seed)%15],nak,nakQ:NAK_Q[nak]||'neutral',yoga:YOGA_NAMES_P[Math.floor(seed*.9)%27],karana:['Bava','Balava','Kaulava','Taitila','Garija','Vanija','Vishti'][Math.floor(seed*2)%7],prashnaAsc:SIGNS[Math.floor(h/2+dow*2)%12],moonInPrashna:SIGNS[Math.floor(seed/2.25)%12]};
+}
+function getShakuna(text){
+  const low=text.toLowerCase();
+  for(const[k,v] of Object.entries(SHAKUNA_DB))if(low.includes(k))return{key:k,desc:v,quality:v.split(' — ')[0].trim()};
+  return{key:text,desc:'The omen is subtle — proceed with awareness and clear intent.',quality:'neutral'};
+}
+async function genPrashna(doSpeak){
+  const q=document.getElementById('prashnaQ').value.trim();if(!q){toast('Enter your question');return}
+  const type=document.getElementById('prashnaType').value;
+  const shakunaTxt=document.getElementById('prashnaShakuna').value.trim()||'nothing specific';
+  const dir=document.getElementById('prashnaDir').value;const dq=DIR_Q[dir]||'neutral';
+  const now=new Date();const panch=getPanchanga(now);const shakuna=getShakuna(shakunaTxt);
+  document.getElementById('prashnaOut').innerHTML='<div class="card"><div class="typing" style="padding:.4rem 0"><span></span><span></span><span></span></div></div>';
+  const yogaQ=AUSP_YOGA.includes(panch.yoga)?'auspicious':INAUSP_YOGA.includes(panch.yoga)?'inauspicious':'neutral';
+  const prompt=`PRASHNA SHASTRA. Question: "${q}" | Category: ${type} | Time: ${now.toLocaleString('en-IN')} | ${WEEKDAYS_P[panch.dow]}
+Panchanga: Vara ${WEEKDAYS_P[panch.dow]} (lord ${panch.dayLord}), Hora ${panch.horaLord}, Tithi ${panch.tithi}, Nak ${panch.nak} (${panch.nakQ}), Yoga ${panch.yoga} (${yogaQ}), Prashna Lagna ${panch.prashnaAsc}, Moon ${panch.moonInPrashna}.
+Shakuna: "${shakunaTxt}" — ${shakuna.desc}. Direction: ${dir} (${dq}).
+${S.chartData?`Natal: Asc ${S.chartData.ascSign}, Moon ${SIGNS[S.chartData.planets[1].si]} (${S.chartData.moonNak}).`:''}
+Return ONLY valid JSON no markdown: {"verdict":"Yes","confidence":72,"verdict_class":"yes","short_answer":"direct 1 sentence","panchanga_analysis":"2-3 sentences","shakuna_reading":"2 sentences on omen for this question","timing":"specific timing","advice":"specific action","remedy":"specific remedy","full_reading":"4 sentence narrative"}`;
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:900,system:'You are Samarthaa, masterful Prashna astrologer. Respond ONLY with valid JSON. No markdown.',messages:[{role:'user',content:prompt}]})});
+    const d=await r.json();let txt=d.content?.[0]?.text||'{}';txt=txt.replace(/```json|```/g,'').trim();
+    let pr;try{pr=JSON.parse(txt)}catch(e){pr=null}
+    if(!pr){document.getElementById('prashnaOut').innerHTML='<div class="card"><p class="csubtitle">Parse error. Try again.</p></div>';return}
+    renderPrashna(pr,panch,shakuna,dir,dq,now,q,doSpeak);
+  }catch(e){document.getElementById('prashnaOut').innerHTML='<div class="card"><p class="csubtitle">Error.</p></div>'}
+}
+function renderPrashna(pr,panch,shakuna,dir,dq,dt,q,doSpeak){
+  const vc=(pr.verdict_class||'maybe').toLowerCase();
+  const pi=[{l:'Vara',v:`${WEEKDAYS_P[panch.dow]} / ${panch.dayLord}`,q:['Sun','Jupiter'].includes(panch.dayLord)?'auspicious':['Mars','Saturn'].includes(panch.dayLord)?'inauspicious':'neutral'},
+    {l:'Hora',v:`${panch.horaLord}`,q:['Jupiter','Venus','Mercury'].includes(panch.horaLord)?'auspicious':['Saturn','Mars'].includes(panch.horaLord)?'inauspicious':'neutral'},
+    {l:'Tithi',v:panch.tithi,q:'neutral'},{l:'Nakshatra',v:panch.nak,q:panch.nakQ},
+    {l:'Yoga',v:panch.yoga,q:AUSP_YOGA.includes(panch.yoga)?'auspicious':INAUSP_YOGA.includes(panch.yoga)?'inauspicious':'neutral'},
+    {l:'Prashna Lagna',v:panch.prashnaAsc,q:'neutral'},{l:'Moon',v:panch.moonInPrashna,q:'neutral'},
+    {l:'Direction',v:dir,q:dq}];
+  let html=`<div class="card"><div class="ctitle">Prashna — ${dt.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}</div>
+  <div style="font-size:.78rem;color:var(--sw);font-style:italic;margin-bottom:.78rem">"${q}"</div>
+  <div style="background:rgba(255,255,255,.025);border:1px solid var(--br);border-radius:9px;overflow:hidden;margin-bottom:.78rem">`;
+  pi.forEach(it=>html+=`<div class="panch-row"><span class="pl">${it.l}</span><span class="pv">${it.v}</span><span class="pq ${it.q}">${it.q}</span></div>`);
+  html+=`</div><div class="shakuna-box ${shakuna.quality}"><div class="shakuna-title">SHAKUNA — ${shakuna.key}</div><p style="font-size:.82rem;line-height:1.52;font-style:italic">${pr.shakuna_reading||shakuna.desc}</p></div>
+  <div class="verdict-box ${vc}"><div class="vword">${pr.verdict||'Conditional'}</div><div class="vconf">Confidence ${pr.confidence||65}% · Prashna Shastra</div><p style="font-size:.85rem;margin-top:.42rem;color:var(--iv);font-style:italic">${pr.short_answer||''}</p></div>`;
+  if(pr.panchanga_analysis)html+=`<div class="ibox amber"><div class="ibox-title">PANCHANGA ANALYSIS</div><p>${pr.panchanga_analysis}</p></div>`;
+  if(pr.timing)html+=`<div class="ibox amber"><div class="ibox-title">TIMING</div><p>${pr.timing}</p></div>`;
+  if(pr.advice)html+=`<div class="ibox blue"><div class="ibox-title">SAMARTHAA'S ADVICE</div><p>${pr.advice}</p></div>`;
+  if(pr.remedy)html+=`<div class="ibox green"><div class="ibox-title">REMEDY</div><p>${pr.remedy}</p></div>`;
+  if(pr.full_reading)html+=`<div class="ibox amber"><div class="ibox-title">FULL PRASHNA READING</div><p>${pr.full_reading}</p></div>`;
+  html+='</div>';document.getElementById('prashnaOut').innerHTML=html;
+  if(doSpeak)speak(`${pr.short_answer} ${pr.full_reading||''} ${pr.timing?'Timing: '+pr.timing+'. ':''} ${pr.advice?'My advice: '+pr.advice:''}`);
+}
+
+// Navamsa D9
+function calcNavamsa(sign){return(sign*9)%12}
+async function genNavamsa(doSpeak){
+  if(!S.dob){toast('Enter birth details');return}
+  if(!S.chartData)S.chartData=buildChart(S.dob,S.tob);
+  const c=S.chartData;
+  const d9Planets=c.planets.map(p=>({...p,d9si:calcNavamsa(p.si),d9sign:SIGNS[calcNavamsa(p.si)],d9skt:SSKT[calcNavamsa(p.si)]}));
+  const d9asc=calcNavamsa(c.asc);
+  let html=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem;margin-bottom:.8rem">
+  <div><div style="font-family:'Cinzel',serif;font-size:.66rem;color:var(--gold);letter-spacing:.07em;margin-bottom:.5rem">RASHI (D1)</div>
+  <div style="overflow-x:auto"><table class="ptable"><thead><tr><th>Graha</th><th>D1 Sign</th></tr></thead><tbody>`;
+  c.planets.slice(0,7).forEach(p=>{html+=`<tr><td>${p.g} ${p.n}</td><td>${SSKT[p.si]}</td></tr>`});
+  html+=`</tbody></table></div></div>
+  <div><div style="font-family:'Cinzel',serif;font-size:.66rem;color:var(--gold);letter-spacing:.07em;margin-bottom:.5rem">NAVAMSA (D9)</div>
+  <div style="overflow-x:auto"><table class="ptable"><thead><tr><th>Graha</th><th>D9 Sign</th></tr></thead><tbody>`;
+  d9Planets.slice(0,7).forEach(p=>{
+    const same=p.si===p.d9si;
+    html+=`<tr><td>${p.g} ${p.n}</td><td style="${same?'color:#4caf85;font-weight:500':''}">${p.d9skt}${same?' ★':''}</td></tr>`;
+  });
+  html+=`</tbody></table></div></div></div>
+  <p style="font-size:.72rem;color:var(--sw);font-style:italic">★ = Vargottama (same sign in D1 & D9 — exceptionally powerful planet)</p>
+  <p style="font-size:.72rem;color:var(--sw);margin-top:.3rem">Navamsa Ascendant: <strong style="color:var(--gl)">${SIGNS[d9asc]} (${SSKT[d9asc]})</strong></p>`;
+  document.getElementById('navamsaOut').innerHTML=html;
+  document.getElementById('navamsaAICard').style.display='block';
+  document.getElementById('navamsaAI').innerHTML='<div class="typing" style="padding:.4rem 0"><span></span><span></span><span></span></div>';
+  const vargottama=d9Planets.filter(p=>p.si===p.d9si).map(p=>p.n);
+  const prompt=`Navamsa (D9) reading for ${S.name||'seeker'}. Natal Asc: ${c.ascSign}. Moon Nakshatra: ${c.moonNak}. Navamsa Asc: ${SIGNS[d9asc]}. Vargottama planets (same in D1+D9): ${vargottama.join(', ')||'none'}. D9 placements: ${d9Planets.slice(0,7).map(p=>`${p.n} in ${p.d9sign}`).join(', ')}. Write 220 words of flowing Navamsa interpretation: dharma and soul purpose, marriage and partnership destiny, spiritual gifts, vargottama planet significance, timing when D9 activates.`;
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:900,system:'You are Samarthaa. Flowing prose only. No markdown.',messages:[{role:'user',content:prompt}]})});
+    const d=await r.json();const txt=d.content?.[0]?.text||'Reading unavailable.';
+    document.getElementById('navamsaAI').innerHTML=`<p style="font-size:.88rem;line-height:1.7;color:var(--iv);font-style:italic">${txt}</p>`;
+    if(doSpeak)speak(txt);
+  }catch(e){document.getElementById('navamsaAI').innerHTML='<p class="csubtitle">Error.</p>'}
+}
+
+// Shadbala
+function calcShadbala(chart){
+  const exaltation=[0,1,9,5,3,11,6];
+  const ownSigns=[[4],[3],[0,7],[2,5],[8,11],[1,6],[9,10]];
+  return PLANET_DEFS.map((pl,i)=>{
+    const p=chart.planets[i];
+    let sthana=5;
+    if(p.si===exaltation[i])sthana=10;
+    else if(ownSigns[i].includes(p.si))sthana=8;
+    else if((p.si+6)%12===exaltation[i])sthana=2;
+    const dig=[4,7,0,0,3,3,6];const digBala=p.h===(dig[i]+1)?8:Math.max(2,8-Math.abs(p.h-(dig[i]+1)));
+    const kaala=Math.floor(Math.random()*4)+4;
+    const chesta=Math.floor(Math.random()*3)+3;
+    const naisargika=[6,2,3,5,7,4,1][i];
+    const drik=Math.floor(Math.random()*3)+2;
+    const total=(sthana+digBala+kaala+chesta+naisargika+drik)/6;
+    return{...pl,sthana,digBala,kaala,chesta,naisargika,drik,total:+total.toFixed(1),
+      components:{Sthana:sthana,Dig:digBala,Kaala:kaala,Chesta:chesta,Naisargika:naisargika,Drik:drik}};
+  });
+}
+async function genShadbala(doSpeak){
+  if(!S.dob){toast('Enter birth details');return}
+  if(!S.chartData)S.chartData=buildChart(S.dob,S.tob);
+  const shad=calcShadbala(S.chartData);S.shadData=shad;
+  const maxT=Math.max(...shad.map(p=>p.total));
+  let html='';
+  const sorted=[...shad].sort((a,b)=>b.total-a.total);
+  sorted.forEach(p=>{
+    const pct=Math.round((p.total/maxT)*100);
+    const col=pct>=80?'#4caf85':pct>=55?'#c9963b':'#e06060';
+    const strength=pct>=80?'Very Strong':pct>=65?'Strong':pct>=50?'Moderate':pct>=35?'Weak':'Very Weak';
+    html+=`<div class="shad-row"><div class="shad-planet"><span class="shad-glyph">${p.g}</span><span class="shad-name">${p.n}</span></div>
+    <div class="shad-track"><div class="shad-fill" style="width:${pct}%;background:${col}"></div></div>
+    <div class="shad-score" style="color:${col}">${p.total} — ${strength}</div></div>`;
+  });
+  document.getElementById('shadOut').innerHTML=html;
+  document.getElementById('shadAICard').style.display='block';
+  document.getElementById('shadAI').innerHTML='<div class="typing" style="padding:.4rem 0"><span></span><span></span><span></span></div>';
+  const top3=sorted.slice(0,3).map(p=>p.n).join(', ');
+  const weak3=sorted.slice(-3).map(p=>p.n).join(', ');
+  const prompt=`Shadbala reading for ${S.name||'seeker'}. Asc ${S.chartData.ascSign}. Planet strength scores: ${shad.map(p=>p.n+': '+p.total).join(', ')}. Strongest: ${top3}. Weakest: ${weak3}. Write 200 words: what strong planets deliver, how weak planets create vulnerabilities, remedies for weak planets, how this affects career, relationships, and health.`;
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,system:'You are Samarthaa. Flowing prose only. No markdown.',messages:[{role:'user',content:prompt}]})});
+    const d=await r.json();const txt=d.content?.[0]?.text||'Reading unavailable.';
+    document.getElementById('shadAI').innerHTML=`<p style="font-size:.88rem;line-height:1.7;color:var(--iv);font-style:italic">${txt}</p>`;
+    if(doSpeak)speak(txt);
+  }catch(e){document.getElementById('shadAI').innerHTML='<p class="csubtitle">Error.</p>'}
+}
+
+// Muhurta
+async function genMuhurta(doSpeak){
+  const de=document.getElementById('muhurtaDate');if(!de.value)de.value=new Date().toISOString().split('T')[0];
+  const date=de.value;const type=document.getElementById('muhurtaType').value;
+  document.getElementById('muhurtaOut').innerHTML='<div class="typing" style="padding:.4rem 0"><span></span><span></span><span></span></div>';
+  const chart=S.chartData||null;
+  const prompt=`Muhurta auspicious timing for purpose: "${type}" on date ${date}.
+${chart?`Personal chart: Asc ${chart.ascSign}, Moon ${SIGNS[chart.planets[1].si]}, nakshatra ${chart.moonNak}.`:'No personal chart available.'}
+Return ONLY valid JSON array (6 time slots, no markdown): [{"time":"6:00 AM - 7:30 AM","quality":"good","name":"Brahma Muhurta","body":"Why this time is auspicious for this purpose"},{"time":"9:00 AM - 10:30 AM","quality":"neutral","name":"..","body":".."},{"time":"11:00 AM - 12:30 PM","quality":"bad","name":"Rahu Kaal","body":".."},{"time":"2:00 PM - 3:30 PM","quality":"good","name":"..","body":".."},{"time":"4:30 PM - 6:00 PM","quality":"neutral","name":"..","body":".."},{"time":"7:00 PM - 8:30 PM","quality":"good","name":"..","body":".."}]`;
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,system:'Respond ONLY with valid JSON array. No markdown.',messages:[{role:'user',content:prompt}]})});
+    const d=await r.json();let txt=d.content?.[0]?.text||'[]';txt=txt.replace(/```json|```/g,'').trim();
+    let mu;try{mu=JSON.parse(txt)}catch(e){mu=null}
+    if(!mu||!mu.length){document.getElementById('muhurtaOut').innerHTML='<p class="csubtitle">Parse error. Try again.</p>';return}
+    let html='',best=null;
+    mu.forEach(m=>{html+=`<div class="muhurta-slot"><div class="ms-quality ${m.quality}"></div><div class="ms-time">${m.time.split(' - ')[0]}</div><div class="ms-info"><div class="ms-name">${m.name}</div><div class="ms-body">${m.body}</div></div></div>`;if(m.quality==='good'&&!best)best=m});
+    document.getElementById('muhurtaOut').innerHTML=html;
+    if(doSpeak&&best)speak(`The best Muhurta for ${type} on ${date} is ${best.name} at ${best.time}. ${best.body}`);
+  }catch(e){document.getElementById('muhurtaOut').innerHTML='<p class="csubtitle">Error fetching Muhurtas.</p>'}
+}
+
+// Consolidated Prediction — THE CROWN FEATURE
+async function genPredict(doSpeak){
+  if(!S.dob){toast('Enter birth details in Setup first');return}
+  if(!S.chartData)S.chartData=buildChart(S.dob,S.tob);
+  const focus=document.getElementById('predictFocus').value;
+  const depth=document.getElementById('predictDepth').value;
+  document.getElementById('predictOut').innerHTML='<div class="card"><div class="typing" style="padding:.5rem 0"><span></span><span></span><span></span></div><p class="csubtitle" style="margin-top:.5rem">Samarthaa is weaving all pillars of your chart…</p></div>';
+  if(!S.ashtakScores){const{scores}=calcAshtak(S.chartData);S.ashtakScores=scores}
+  if(!S.shadData)S.shadData=calcShadbala(S.chartData);
+  const now=new Date();const tc=buildChart(now.toISOString().split('T')[0],'12:00');
+  const panch=getPanchanga(now);
+  const bd=new Date(S.dob+'T'+(S.tob||'00:00'));
+  const age=(now-bd)/(1000*60*60*24*365.25);
+  const dsi=S.chartData.moonNakIdx%9;let cum=0,curDasha='',curRem=0;
+  for(let i=0;i<9;i++){const pl=DSEQ[(dsi+i)%9];const s=cum,e=cum+pl.y;if(age>=s&&age<e){curDasha=pl.n;curRem=(e-age).toFixed(1)}cum=e}
+  const strongH=S.ashtakScores.map((s,i)=>s>=28?'H'+(i+1)+'('+HOUSE_MEANINGS[i]+')':null).filter(Boolean);
+  const weakH=S.ashtakScores.map((s,i)=>s<=24?'H'+(i+1)+'('+HOUSE_MEANINGS[i]+')':null).filter(Boolean);
+  const sorted=[...S.shadData].sort((a,b)=>b.total-a.total);
+  const d9Planets=S.chartData.planets.slice(0,7).map(p=>({...p,d9si:calcNavamsa(p.si),d9sign:SIGNS[calcNavamsa(p.si)]}));
+  const vargottama=d9Planets.filter(p=>p.si===p.d9si).map(p=>p.n);
+  const yogas=YRULES.filter(y=>y.test(S.chartData)).map(y=>y.name);
+  const maxWords=depth==='summary'?220:depth==='deep'?700:420;
+  const prompt=`CONSOLIDATED VEDIC PREDICTION — ALL PILLARS
+Seeker: ${S.name||'the seeker'}, ${S.gender}, born ${S.dob} at ${S.tob} in ${S.city}, ${S.country}.
+Focus: ${focus}
+
+PILLAR 1 — RASHI KUNDLI: Ascendant ${S.chartData.ascSign} (${S.chartData.ascSkt}). Planets: ${S.chartData.planets.map(p=>`${p.n} in H${p.h}/${SIGNS[p.si]}`).join(', ')}. Yogas: ${yogas.join(', ')||'none detected'}.
+
+PILLAR 2 — NAVAMSA D9: Navamsa Asc ${SIGNS[calcNavamsa(S.chartData.asc)]}. Vargottama (D1=D9): ${vargottama.join(', ')||'none'}.
+
+PILLAR 3 — GOCHARA TRANSITS: Current transits — Sun ${SIGNS[tc.planets[0].si]}, Jupiter ${SIGNS[tc.planets[4].si]}, Saturn ${SIGNS[tc.planets[6].si]}, Mars ${SIGNS[tc.planets[2].si]}.
+
+PILLAR 4 — ASHTAKAVARGA: Strong houses (28+): ${strongH.join(', ')||'none'}. Weak houses (24-): ${weakH.join(', ')||'none'}.
+
+PILLAR 5 — VIMSHOTTARI DASHA: Current Mahadasha: ${curDasha} (${curRem} years remaining).
+
+PILLAR 6 — SHADBALA: Strongest planets: ${sorted.slice(0,3).map(p=>p.n).join(', ')}. Weakest: ${sorted.slice(-2).map(p=>p.n).join(', ')}.
+
+PILLAR 7 — PRASHNA MOMENT: Today ${WEEKDAYS_P[panch.dow]}, ${panch.horaLord} Hora, ${panch.nak} nakshatra (${panch.nakQ}), ${panch.yoga} yoga.
+
+PILLAR 8 — PANCHANGA: Tithi ${panch.tithi}. Moon in Prashna: ${panch.moonInPrashna}.
+
+Synthesise ALL 8 pillars into a unified ${focus} prediction (${maxWords} words). Structure as:
+1. Overall cosmic signature — what all pillars agree on
+2. Key blessings and strengths (where multiple pillars align positively)  
+3. Key challenges and cautions (where pillars warn)
+4. Specific timing — near-term (next 3 months), medium-term (next year)
+5. Dharmic guidance — soul's deepest purpose right now
+6. Three concrete remedies — one each for body, mind, spirit
+
+Write as flowing prose. No bullets, no markdown. Speak as Samarthaa would — warm, wise, specific, empowering.`;
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1500,system:'You are Samarthaa, a master Vedic astrologer synthesising all branches of Jyotish. Flowing prose only. No markdown, no bullets. Be specific about the seeker by name.',messages:[{role:'user',content:prompt}]})});
+    const d=await r.json();const txt=d.content?.[0]?.text||'Reading unavailable.';
+    const pillars=[
+      {cls:'p1',label:'Rashi Kundli'},{cls:'p2',label:'Navamsa D9'},{cls:'p3',label:'Gochara'},{cls:'p4',label:'Ashtakavarga'},
+      {cls:'p5',label:'Vimshottari Dasha'},{cls:'p6',label:'Shadbala'},{cls:'p7',label:'Prashna'},{cls:'p7',label:'Panchanga'}
+    ];
+    let pillarsHtml=pillars.map(p=>`<span class="pillar-badge ${p.cls}">✦ ${p.label}</span>`).join('');
+    let html=`<div class="card" style="border-color:rgba(201,150,59,.32);background:rgba(201,150,59,.04)">
+      <div class="ctitle">🔮 ${focus.charAt(0).toUpperCase()+focus.slice(1)} — ${depth.charAt(0).toUpperCase()+depth.slice(1)} Reading</div>
+      <div style="margin-bottom:.85rem;line-height:1.8">${pillarsHtml}</div>
+      <div style="border-top:1px solid rgba(201,150,59,.15);padding-top:.85rem">
+        <p style="font-size:.92rem;line-height:1.78;color:var(--iv);font-style:italic">${txt.replace(/\n\n/g,'</p><p style="font-size:.92rem;line-height:1.78;color:var(--iv);font-style:italic;margin-top:.85rem">').replace(/\n/g,' ')}</p>
+      </div>
+      <div style="margin-top:1rem;padding:.65rem;background:rgba(255,255,255,.03);border-radius:8px;border:1px solid var(--br);text-align:center">
+        <div style="font-family:'Cinzel',serif;font-size:.65rem;color:rgba(201,150,59,.55);letter-spacing:.08em;margin-bottom:.3rem">CURRENT DASHA · MOMENT OF READING</div>
+        <div style="font-size:.82rem;color:var(--sw)">${curDasha} Mahadasha · ${curRem} yrs remaining · ${WEEKDAYS_P[panch.dow]} · ${panch.nak} nakshatra · ${panch.yoga} yoga</div>
+      </div>
+    </div>`;
+    document.getElementById('predictOut').innerHTML=html;
+    if(doSpeak)speak(txt.substring(0,1400));
+  }catch(e){document.getElementById('predictOut').innerHTML='<div class="card"><p class="csubtitle">Error generating prediction. Try again.</p></div>'}
+}
+
+// Init
+document.getElementById('horoDate').value=new Date().toISOString().split('T')[0];
+document.getElementById('muhurtaDate').value=new Date().toISOString().split('T')[0];
+// Pre-fill state with credentials
+document.getElementById('cfgDot').className='dot ok';
+document.getElementById('cfgLbl').textContent='Voice ✓';
+setTimeout(()=>addMsg('oracle','Namaste. I am Samarthaa — your personal Vedic oracle, weaving together all eight pillars of Jyotish to illuminate your path. Press the mic and speak your question by voice, or type below. For a full reading, visit the Prediction tab.'),700);
+</script>
+</body>
+</html>
