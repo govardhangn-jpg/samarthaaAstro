@@ -738,7 +738,7 @@ async function sendMsg(){
     const d=await r.json();const ans=d.content?.[0]?.text||'The stars are silent. Please try again.';
     document.getElementById('typing')?.remove();addMsg('oracle',ans);S.chatHistory.push({role:'assistant',content:ans});
     if(voiceTriggered){voiceTriggered=false;await speak(ans);}
-  }catch(e){document.getElementById('typing')?.remove();addMsg('oracle','The cosmos is veiled. Check your connection.');setVS('idle')}
+  }catch(e){document.getElementById('typing')?.remove();addMsg('oracle','Error: '+e.message+'. Check your internet and try again.');setVS('idle');console.error('oracle error:',e)}
 }
 function buildSys(){
   const sm={modern:'Blend Vedic wisdom with clear accessible language.',traditional:'Use Sanskrit Vedic terminology — Rashi, Nakshatra, Graha, Bhava, Yoga, Dasha.',spiritual:'Speak from a spiritual, devotional perspective. Reference karma, dharma, soul journey.',practical:'Focus on practical actionable life guidance — career, relationships, health, decisions.'};
@@ -833,7 +833,7 @@ Return ONLY valid JSON no markdown: {"overall":"2 sentences","lucky_number":7,"l
     let h;try{h=JSON.parse(txt)}catch(e){h=null}
     if(!h){document.getElementById('horoOut').innerHTML='<p class="csubtitle">Could not parse horoscope. Try again.</p>';return}
     renderHoroscope(h,doSpeak);
-  }catch(e){document.getElementById('horoOut').innerHTML='<p class="csubtitle">Error fetching horoscope.</p>'}
+  }catch(e){document.getElementById('horoOut').innerHTML='<p class="csubtitle">Error: '+e.message+'</p>';console.error('horoscope error:',e)}
 }
 function renderHoroscope(h,doSpeak){
   let html=`<div class="ibox amber"><p>${h.overall}</p><div style="display:flex;gap:.9rem;margin-top:.5rem;flex-wrap:wrap;font-size:.72rem;color:var(--sw)"><span>🔢 <strong style="color:var(--gl)">${h.lucky_number}</strong></span><span>🎨 <strong style="color:var(--gl)">${h.lucky_color}</strong></span><span>⏰ <strong style="color:var(--gl)">${h.lucky_time}</strong></span></div></div>`;
@@ -850,8 +850,8 @@ async function genTransits(doSpeak){
   if(!S.chartData)S.chartData=buildChart(S.dob,S.tob);
   document.getElementById('transitOut').innerHTML='<div class="typing" style="padding:.4rem 0"><span></span><span></span><span></span></div>';
   const now=new Date();const tc=buildChart(now.toISOString().split('T')[0],'12:00');
-  const natal=S.chartData.planets.map(p=>`${p.n} H${p.h}/${SIGNS[p.si]}`).join(', ');
-  const today=tc.planets.slice(0,7).map(p=>`${p.n} in ${SIGNS[p.si]}`).join(', ');
+  const natal=S.chartData.planets.map(function(p){return p.n+' H'+p.h+'/'+SIGNS[p.si];}).join(', ');
+  const today=tc.planets.slice(0,7).map(function(p){return p.n+' in '+SIGNS[p.si];}).join(', ');
   const prompt=`Vedic transit analysis for ${S.name||'seeker'} today ${now.toDateString()}. Natal: ${natal}. Asc: ${S.chartData.ascSign}. Today: ${today}. Return ONLY valid JSON array no markdown: [{"planet":"Saturn","glyph":"♄","title":"short title","body":"2 sentences","date":"period active"},{"planet":"Jupiter","glyph":"♃","title":"..","body":"..","date":".."},{"planet":"Mars","glyph":"♂","title":"..","body":"..","date":".."},{"planet":"Venus","glyph":"♀","title":"..","body":"..","date":".."},{"planet":"Rahu","glyph":"☊","title":"..","body":"..","date":".."}]`;
   try{
     const r=await fetch('/.netlify/functions/claude',{method:'POST',headers:{'Content-Type':'application/json'},
@@ -862,7 +862,7 @@ async function genTransits(doSpeak){
     let html='',spoken='Current transits. ';
     tr.forEach(t=>{html+=`<div class="trow"><div class="tg">${t.glyph||'★'}</div><div><div class="tit">${t.planet} — ${t.title}</div><div class="tbd">${t.body}</div><div class="tdt">${t.date}</div></div></div>`;spoken+=`${t.planet}: ${t.body} `});
     document.getElementById('transitOut').innerHTML=html;if(doSpeak)speak(spoken);
-  }catch(e){document.getElementById('transitOut').innerHTML='<p class="csubtitle">Error fetching transits.</p>'}
+  }catch(e){document.getElementById('transitOut').innerHTML='<p class="csubtitle">Error: '+e.message+'</p>';console.error('transit error:',e)}
 }
 
 // Synastry
@@ -892,7 +892,7 @@ async function genSynastry(doSpeak){
     if(co.verdict)html+=`<div style="text-align:center;font-family:'Cinzel',serif;font-size:.82rem;color:var(--gl);padding:.5rem;border:1px solid rgba(201,150,59,.18);border-radius:8px;margin-top:.65rem">${co.verdict}</div>`;
     html+='</div>';document.getElementById('compatOut').innerHTML=html;
     if(doSpeak)speak(`${S.name||'You'} and ${p2n} score ${sc} out of 100. ${co.summary} ${co.verdict||''}`);
-  }catch(e){document.getElementById('compatOut').innerHTML='<div class="card"><p class="csubtitle">Error.</p></div>'}
+  }catch(e){document.getElementById('compatOut').innerHTML='<div class="card"><p class="csubtitle">Error: '+e.message+'</p></div>';console.error('synastry error:',e)}
 }
 
 // Dasha
@@ -962,7 +962,7 @@ async function genAshtakAI(scores,strong,weak,doSpeak){
     const d=await r.json();const txt=d.content?.[0]?.text||'Reading unavailable.';
     document.getElementById('ashtakAI').innerHTML=`<p style="font-size:.88rem;line-height:1.7;color:var(--iv);font-style:italic">${txt}</p>`;
     if(doSpeak)speak(txt);
-  }catch(e){document.getElementById('ashtakAI').innerHTML='<p class="csubtitle">Error.</p>'}
+  }catch(e){document.getElementById('ashtakAI').innerHTML='<p class="csubtitle">Error: '+e.message+'</p>';console.error('ashtak error:',e)}
 }
 
 // Prashna
@@ -1008,7 +1008,7 @@ Return ONLY valid JSON no markdown: {"verdict":"Yes","confidence":72,"verdict_cl
     let pr;try{pr=JSON.parse(txt)}catch(e){pr=null}
     if(!pr){document.getElementById('prashnaOut').innerHTML='<div class="card"><p class="csubtitle">Parse error. Try again.</p></div>';return}
     renderPrashna(pr,panch,shakuna,dir,dq,now,q,doSpeak);
-  }catch(e){document.getElementById('prashnaOut').innerHTML='<div class="card"><p class="csubtitle">Error.</p></div>'}
+  }catch(e){document.getElementById('prashnaOut').innerHTML='<div class="card"><p class="csubtitle">Error: '+e.message+'</p></div>';console.error('prashna error:',e)}
 }
 function renderPrashna(pr,panch,shakuna,dir,dq,dt,q,doSpeak){
   const vc=(pr.verdict_class||'maybe').toLowerCase();
@@ -1059,14 +1059,14 @@ async function genNavamsa(doSpeak){
   document.getElementById('navamsaAICard').style.display='block';
   document.getElementById('navamsaAI').innerHTML='<div class="typing" style="padding:.4rem 0"><span></span><span></span><span></span></div>';
   const vargottama=d9Planets.filter(p=>p.si===p.d9si).map(p=>p.n);
-  const prompt=`Navamsa (D9) reading for ${S.name||'seeker'}. Natal Asc: ${c.ascSign}. Moon Nakshatra: ${c.moonNak}. Navamsa Asc: ${SIGNS[d9asc]}. Vargottama planets (same in D1+D9): ${vargottama.join(', ')||'none'}. D9 placements: ${d9Planets.slice(0,7).map(p=>`${p.n} in ${p.d9sign}`).join(', ')}. Write 220 words of flowing Navamsa interpretation: dharma and soul purpose, marriage and partnership destiny, spiritual gifts, vargottama planet significance, timing when D9 activates.`;
+  const prompt=`Navamsa (D9) reading for ${S.name||'seeker'}. Natal Asc: ${c.ascSign}. Moon Nakshatra: ${c.moonNak}. Navamsa Asc: ${SIGNS[d9asc]}. Vargottama planets (same in D1+D9): ${vargottama.join(', ')||'none'}. D9 placements: ${d9Planets.slice(0,7).map(function(p){return p.n+' in '+p.d9sign;}).join(', ')}. Write 220 words of flowing Navamsa interpretation: dharma and soul purpose, marriage and partnership destiny, spiritual gifts, vargottama planet significance, timing when D9 activates.`;
   try{
     const r=await fetch('/.netlify/functions/claude',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:900,system:'You are Samarthaa. Flowing prose only. No markdown.',messages:[{role:'user',content:prompt}]})});
     const d=await r.json();const txt=d.content?.[0]?.text||'Reading unavailable.';
     document.getElementById('navamsaAI').innerHTML=`<p style="font-size:.88rem;line-height:1.7;color:var(--iv);font-style:italic">${txt}</p>`;
     if(doSpeak)speak(txt);
-  }catch(e){document.getElementById('navamsaAI').innerHTML='<p class="csubtitle">Error.</p>'}
+  }catch(e){document.getElementById('navamsaAI').innerHTML='<p class="csubtitle">Error: '+e.message+'</p>';console.error('navamsa error:',e)}
 }
 
 // Shadbala
@@ -1116,7 +1116,7 @@ async function genShadbala(doSpeak){
     const d=await r.json();const txt=d.content?.[0]?.text||'Reading unavailable.';
     document.getElementById('shadAI').innerHTML=`<p style="font-size:.88rem;line-height:1.7;color:var(--iv);font-style:italic">${txt}</p>`;
     if(doSpeak)speak(txt);
-  }catch(e){document.getElementById('shadAI').innerHTML='<p class="csubtitle">Error.</p>'}
+  }catch(e){document.getElementById('shadAI').innerHTML='<p class="csubtitle">Error: '+e.message+'</p>';console.error('shadbala error:',e)}
 }
 
 // Muhurta
@@ -1138,7 +1138,7 @@ Return ONLY valid JSON array (6 time slots, no markdown): [{"time":"6:00 AM - 7:
     mu.forEach(m=>{html+=`<div class="muhurta-slot"><div class="ms-quality ${m.quality}"></div><div class="ms-time">${m.time.split(' - ')[0]}</div><div class="ms-info"><div class="ms-name">${m.name}</div><div class="ms-body">${m.body}</div></div></div>`;if(m.quality==='good'&&!best)best=m});
     document.getElementById('muhurtaOut').innerHTML=html;
     if(doSpeak&&best)speak(`The best Muhurta for ${type} on ${date} is ${best.name} at ${best.time}. ${best.body}`);
-  }catch(e){document.getElementById('muhurtaOut').innerHTML='<p class="csubtitle">Error fetching Muhurtas.</p>'}
+  }catch(e){document.getElementById('muhurtaOut').innerHTML='<p class="csubtitle">Error: '+e.message+'</p>';console.error('muhurta error:',e)}
 }
 
 // Consolidated Prediction — THE CROWN FEATURE
@@ -1167,7 +1167,7 @@ async function genPredict(doSpeak){
 Seeker: ${S.name||'the seeker'}, ${S.gender}, born ${S.dob} at ${S.tob} in ${S.city}, ${S.country}.
 Focus: ${focus}
 
-PILLAR 1 — RASHI KUNDLI: Ascendant ${S.chartData.ascSign} (${S.chartData.ascSkt}). Planets: ${S.chartData.planets.map(p=>`${p.n} in H${p.h}/${SIGNS[p.si]}`).join(', ')}. Yogas: ${yogas.join(', ')||'none detected'}.
+PILLAR 1 — RASHI KUNDLI: Ascendant ${S.chartData.ascSign} (${S.chartData.ascSkt}). Planets: ${S.chartData.planets.map(function(p){return p.n+' in H'+p.h+'/'+SIGNS[p.si];}).join(', ')}. Yogas: ${yogas.join(', ')||'none detected'}.
 
 PILLAR 2 — NAVAMSA D9: Navamsa Asc ${SIGNS[calcNavamsa(S.chartData.asc)]}. Vargottama (D1=D9): ${vargottama.join(', ')||'none'}.
 
@@ -1200,25 +1200,54 @@ Write as flowing prose. No bullets, no markdown. Speak as Samarthaa would — wa
       {cls:'p1',label:'Rashi Kundli'},{cls:'p2',label:'Navamsa D9'},{cls:'p3',label:'Gochara'},{cls:'p4',label:'Ashtakavarga'},
       {cls:'p5',label:'Vimshottari Dasha'},{cls:'p6',label:'Shadbala'},{cls:'p7',label:'Prashna'},{cls:'p7',label:'Panchanga'}
     ];
-    let pillarsHtml=pillars.map(p=>`<span class="pillar-badge ${p.cls}">✦ ${p.label}</span>`).join('');
-    let html=`<div class="card" style="border-color:rgba(201,150,59,.32);background:rgba(201,150,59,.04)">
-      <div class="ctitle">🔮 ${focus.charAt(0).toUpperCase()+focus.slice(1)} — ${depth.charAt(0).toUpperCase()+depth.slice(1)} Reading</div>
-      <div style="margin-bottom:.85rem;line-height:1.8">${pillarsHtml}</div>
-      <div style="border-top:1px solid rgba(201,150,59,.15);padding-top:.85rem">
-        <p style="font-size:.92rem;line-height:1.78;color:var(--iv);font-style:italic">${txt.replace(/\n\n/g,'</p><p style="font-size:.92rem;line-height:1.78;color:var(--iv);font-style:italic;margin-top:.85rem">').replace(/\n/g,' ')}</p>
-      </div>
-      <div style="margin-top:1rem;padding:.65rem;background:rgba(255,255,255,.03);border-radius:8px;border:1px solid var(--br);text-align:center">
-        <div style="font-family:'Cinzel',serif;font-size:.65rem;color:rgba(201,150,59,.55);letter-spacing:.08em;margin-bottom:.3rem">CURRENT DASHA · MOMENT OF READING</div>
-        <div style="font-size:.82rem;color:var(--sw)">${curDasha} Mahadasha · ${curRem} yrs remaining · ${WEEKDAYS_P[panch.dow]} · ${panch.nak} nakshatra · ${panch.yoga} yoga</div>
-      </div>
-    </div>`;
+    let pillarsHtml=pillars.map(function(p){return '<span class="pillar-badge '+p.cls+'">✦ '+p.label+'</span>';}).join('');
+    const focusTitle=focus.charAt(0).toUpperCase()+focus.slice(1);
+    const depthTitle=depth.charAt(0).toUpperCase()+depth.slice(1);
+    const cleanTxt=txt.replace(/\n\n/g,'<br><br>').replace(/\n/g,' ');
+    let html='<div class="card" style="border-color:rgba(201,150,59,.32);background:rgba(201,150,59,.04)">'
+      +'<div class="ctitle">🔮 '+focusTitle+' — '+depthTitle+' Reading</div>'
+      +'<div style="margin-bottom:.85rem;line-height:1.8">'+pillarsHtml+'</div>'
+      +'<div style="border-top:1px solid rgba(201,150,59,.15);padding-top:.85rem">'
+      +'<p style="font-size:.92rem;line-height:1.78;color:var(--iv);font-style:italic">'+cleanTxt+'</p>'
+      +'</div>'
+      +'<div style="margin-top:1rem;padding:.65rem;background:rgba(255,255,255,.03);border-radius:8px;border:1px solid var(--br);text-align:center">'
+      +'<div style="font-family:Cinzel,serif;font-size:.65rem;color:rgba(201,150,59,.55);letter-spacing:.08em;margin-bottom:.3rem">CURRENT DASHA · MOMENT OF READING</div>'
+      +'<div style="font-size:.82rem;color:var(--sw)">'+curDasha+' Mahadasha · '+curRem+' yrs remaining · '+WEEKDAYS_P[panch.dow]+' · '+panch.nak+' nakshatra · '+panch.yoga+' yoga</div>'
+      +'</div>'
+      +'</div>';
     document.getElementById('predictOut').innerHTML=html;
     if(doSpeak)speak(txt);
-  }catch(e){document.getElementById('predictOut').innerHTML='<div class="card"><p class="csubtitle">Error generating prediction. Try again.</p></div>'}
+  }catch(e){document.getElementById('predictOut').innerHTML='<div class="card"><p class="csubtitle">Error: '+e.message+'</p></div>';console.error('predict error:',e)}
 }
 
 // Init
 document.getElementById('horoDate').value=new Date().toISOString().split('T')[0];
+
+// Test proxy on load - non-blocking
+(async function testProxy(){
+  try{
+    const r = await fetch('/.netlify/functions/claude',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:10,
+        messages:[{role:'user',content:'Say: ready'}]})
+    });
+    if(!r.ok){
+      const txt = await r.text();
+      console.warn('Proxy test failed:', r.status, txt);
+      if(r.status===404){
+        toast('⚠ Functions not deployed — push netlify/functions/claude.js to GitHub');
+      } else if(r.status===500){
+        toast('⚠ Set ANTHROPIC_API_KEY in Netlify Environment Variables');
+      }
+    } else {
+      console.log('✓ Proxy OK');
+    }
+  }catch(e){
+    console.warn('Proxy unreachable:', e.message);
+    // Running locally - functions not available, that's OK
+  }
+})();
 document.getElementById('muhurtaDate').value=new Date().toISOString().split('T')[0];
 // Pre-fill state with credentials
 document.getElementById('cfgDot').className='dot ok';
