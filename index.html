@@ -1120,60 +1120,191 @@ async function genSynastry(doSpeak){
 }
 
 // Dasha
-function genDasha(doSpeak){
-  if(!S.dob){toast('Enter birth details');return}
-  if(!S.chartData)S.chartData=buildChart(S.dob,S.tob);
-  const bd=new Date(S.dob+'T'+(S.tob||'00:00'));
-  const now=new Date(),age=(now-bd)/(1000*60*60*24*365.25);
-  const si=S.chartData.moonNakIdx%9;let cum=0,html='',curName='',curRem=0;
-  for(let i=0;i<9;i++){
-    const pl=DSEQ[(si+i)%9];const s=cum,e=cum+pl.y;
-    const cur=age>=s&&age<e;const prog=cur?Math.min(100,(age-s)/pl.y*100):age>=e?100:0;
-    const sy=new Date(bd);sy.setFullYear(sy.getFullYear()+Math.floor(s));
-    const ey=new Date(bd);ey.setFullYear(ey.getFullYear()+Math.floor(e));
-    if(cur){curName=pl.n;curRem=(e-age).toFixed(1)}
-    html+=`<div class="dbar${cur?' cur':''}"><div class="dpic">${pl.g}</div><div class="dinf"><div class="dname">${pl.n} Mahadasha${cur?`<span class="cbadge">◆ NOW</span>`:''}</div><div class="dper">${sy.getFullYear()} – ${ey.getFullYear()} · ${pl.y} yrs</div><div class="dtrk"><div class="dfl" style="width:${prog.toFixed(0)}%"></div></div></div></div>`;
-    cum=e;
+async function genDasha(doSpeak){
+  if(!S.dob){toast('Enter birth details in Setup');return}
+  if(!S.chartData)await genKundli();
+  if(!S.chartData){toast('Generate Kundli first');return}
+  document.getElementById('dashaOut').innerHTML='<div class="typing" style="padding:.4rem 0"><span></span><span></span><span></span></div>';
+  const moon=S.chartData.planets.find(p=>p.name==='Moon');
+  if(!moon){toast('Moon position not found');return}
+  try{
+    const r=await fetch('/.netlify/functions/dasha',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        moon_longitude:moon.longitude,
+        birth_year:parseInt(S.dob.split('-')[0]),
+        birth_month:parseInt(S.dob.split('-')[1]),
+        birth_day:parseInt(S.dob.split('-')[2]),
+        birth_hour_ist:parseFloat((S.tob||'06:00').split(':')[0])+(parseFloat((S.tob||'06:00').split(':')[1]||0)/60)
+      })
+    });
+    const d=await r.json();
+    if(d.error)throw new Error(d.error);
+    S.dashaData=d;
+    renderDashaAccurate(d,doSpeak);
+  }catch(e){
+    console.error('Dasha error:',e);
+    document.getElementById('dashaOut').innerHTML='<p class="csubtitle">Error: '+e.message+'</p>';
   }
+}
+
+function renderDashaAccurate(d,doSpeak){
+  const today=Date.now();
+  let html='';
+  // Current period banner
+  if(d.current_maha){
+    html+='<div class="ibox amber" style="margin-bottom:.9rem">'
+      +'<div class="ibox-title">CURRENT PERIOD</div>'
+      +'<div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:center;margin-top:.3rem">'
+      +'<span style="font-family:Cinzel,serif;font-size:.95rem;color:var(--gl)">'+d.current_maha+' Mahadasha</span>'
+      +(d.current_antar?'<span style="font-size:.78rem;color:var(--sw)">› '+d.current_antar+' Antardasha</span>':'')
+      +'</div>'
+      +'<div style="font-size:.72rem;color:var(--sw);margin-top:.3rem;font-family:\'Space Mono\',monospace">'
+      +'Maha ends: '+d.current_maha_end+' ('+d.yrs_rem_maha+' yrs remaining)'
+      +(d.current_antar?' · Antar ends: '+d.current_antar_end+' ('+d.yrs_rem_antar+' yrs remaining)':'')
+      +'</div></div>';
+  }
+  // Moon nakshatra info
+  html+='<div style="font-size:.72rem;color:var(--sw);font-style:italic;margin-bottom:.8rem;padding:.4rem .6rem;background:rgba(255,255,255,.03);border-radius:7px">'
+    +'Moon Nakshatra: <strong style="color:var(--gl)">'+d.moon_nakshatra+'</strong> · '
+    +'Birth Dasha: <strong style="color:var(--gl)">'+d.moon_nak_lord+'</strong> · '
+    +'Balance: <strong style="color:var(--gl)">'+d.balance_yrs+'y '+d.balance_months+'m '+d.balance_days+'d</strong>'
+    +'</div>';
+
+  // Mahadasha timeline
+  d.mahadashas.forEach(m=>{
+    const pct=Math.round((Math.max(0,today-m.startMs))/(m.endMs-m.startMs)*100);
+    const clampedPct=Math.min(100,Math.max(0,pct));
+    html+='<div class="dbar'+(m.isCurrent?' cur':'')+'" style="flex-direction:column;align-items:stretch;gap:5px">'
+      +'<div style="display:flex;align-items:center;gap:8px">'
+      +'<div class="dpic">'+({Ketu:'☋',Venus:'♀',Sun:'☉',Moon:'☽',Mars:'♂',Rahu:'☊',Jupiter:'♃',Saturn:'♄',Mercury:'☿'}[m.lord]||'★')+'</div>'
+      +'<div class="dinf">'
+      +'<div class="dname">'+m.lord+' Mahadasha'+(m.isCurrent?'<span class="cbadge">◆ NOW</span>':'')+'</div>'
+      +'<div class="dper">'+m.start+' → '+m.end+' · '+m.years+' yrs</div>'
+      +'<div class="dtrk"><div class="dfl" style="width:'+clampedPct+'%"></div></div>'
+      +'</div></div>';
+    // Show antardashas for current + nearby mahadashas
+    if(m.isCurrent||Math.abs(today-m.startMs)<2*365.25*86400000*1000){
+      html+='<div style="margin-left:2.2rem;margin-top:4px">';
+      m.antardashas.forEach(a=>{
+        const apct=Math.min(100,Math.max(0,Math.round((Math.max(0,today-a.startMs))/(a.endMs-a.startMs)*100)));
+        html+='<div style="display:flex;align-items:center;gap:6px;padding:.25rem .4rem;border-radius:6px'+(a.isCurrent?';background:rgba(201,150,59,.06);border:1px solid rgba(201,150,59,.2)':';border:1px solid transparent')+'">'
+          +'<div style="font-size:.75rem;color:var(--sw);min-width:68px;font-family:\'Space Mono\',monospace">'+a.lord+(a.isCurrent?' ◆':'')+'</div>'
+          +'<div style="flex:1;height:2px;background:rgba(255,255,255,.08);border-radius:1px;overflow:hidden"><div style="height:100%;background:var(--gold);width:'+apct+'%"></div></div>'
+          +'<div style="font-size:.65rem;color:var(--sw);white-space:nowrap">'+a.start.split('-').slice(2).join(' ')+' - '+a.end.split('-').slice(2).join(' ')+'</div>'
+          +'</div>';
+      });
+      html+='</div>';
+    }
+    html+='</div>';
+  });
   document.getElementById('dashaOut').innerHTML=html;
-  if(doSpeak&&curName){speak(`You are in your ${curName} Mahadasha with ${curRem} years remaining. This planetary period shapes your life themes and karmic lessons.`);}
+
+  if(doSpeak&&d.current_maha){
+    speak('You are currently in your '+d.current_maha+' Mahadasha'
+      +(d.current_antar?', '+d.current_antar+' Antardasha':'')+'. '
+      +'Your Moon is in the '+d.moon_nakshatra+' nakshatra. '
+      +'The '+d.current_maha+' Mahadasha ends on '+d.current_maha_end
+      +', with '+d.yrs_rem_maha+' years remaining.');
+  }
 }
 
 // Ashtakavarga
-function calcAshtak(chart){
-  const scores=Array(12).fill(0);
-  const bav=PLANET_DEFS.map((pd,pi)=>{
-    const ph=chart.planets[pi].h-1;
-    const row=Array(12).fill(0).map((_,hi)=>{const dist=(hi-ph+12)%12;return[0,1,2,3,4,7,8].includes(dist)?1:0});
-    row.forEach((v,hi)=>{scores[hi]+=v});return row;
+// calcAshtak replaced by /ashtak function
+
+async function genAshtak(doSpeak){
+  if(!S.dob){toast('Enter birth details in Setup');return}
+  if(!S.chartData)await genKundli();
+  if(!S.chartData){toast('Generate Kundli first');return}
+  document.getElementById('ashtakGrid').innerHTML='<div class="typing" style="padding:.4rem 0"><span></span><span></span><span></span></div>';
+  document.getElementById('ashtakIntCard').style.display='none';
+  document.getElementById('ashtakAICard').style.display='none';
+
+  // Build planet_positions from chart data
+  const pp={};
+  S.chartData.planets.forEach(p=>{
+    if(['Sun','Moon','Mars','Mercury','Jupiter','Venus','Saturn'].includes(p.name))
+      pp[p.name]=p.sign_idx;
   });
-  const maxR=Math.max(...scores)||1;
-  return{scores:scores.map(s=>Math.round(15+(s/maxR)*27)),bav};
+
+  try{
+    const r=await fetch('/.netlify/functions/ashtak',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({planet_positions:pp,asc_sign_idx:S.chartData.asc_sign_idx})
+    });
+    const d=await r.json();
+    if(d.error)throw new Error(d.error);
+    S.ashtakScores=d.sarvashtakavarga;
+    renderAshtakAccurate(d,doSpeak);
+  }catch(e){
+    console.error('Ashtak error:',e);
+    document.getElementById('ashtakGrid').innerHTML='<p class="csubtitle">Error: '+e.message+'</p>';
+  }
 }
-function genAshtak(doSpeak){
-  if(!S.dob){toast('Enter birth details');return}
-  if(!S.chartData)S.chartData=buildChart(S.dob,S.tob);
-  const{scores,bav}=calcAshtak(S.chartData);S.ashtakScores=scores;
-  let html='<div class="avg-grid">';
-  scores.forEach((sc,i)=>{const strong=sc>=28,weak=sc<=24;const pct=Math.round((sc/42)*100);const fc=strong?'#4caf85':weak?'#e06060':'#c9963b';
-    html+=`<div class="avg-cell${strong?' strong':weak?' weak':''}"><div class="avg-house">H${i+1}</div><div class="avg-sign">${SSKT[i]}</div><div class="avg-score">${sc}</div><div class="avg-bar"><div class="avg-fill" style="width:${pct}%;background:${fc}"></div></div></div>`;
+
+function renderAshtakAccurate(d,doSpeak){
+  const sarva=d.sarvashtakavarga;
+  const SIGNS=['Aries','Taurus','Gemini','Cancer','Leo','Virgo','Libra','Scorpio','Sagittarius','Capricorn','Aquarius','Pisces'];
+  const SSKT=['Mesha','Vrishabha','Mithuna','Karka','Simha','Kanya','Tula','Vrishchika','Dhanu','Makara','Kumbha','Meena'];
+
+  // Summary banner
+  let html='<div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.7rem;font-size:.7rem;font-family:\'Space Mono\',monospace">'
+    +'<span style="color:var(--sw)">Total: <strong style="color:var(--gl)">'+d.total_bindus+'/337</strong></span>'
+    +'<span style="color:rgba(76,200,133,.7)">Strong(30+): '+sarva.filter(s=>s>=30).length+'h</span>'
+    +'<span style="color:rgba(220,100,100,.7)">Weak(-24): '+sarva.filter(s=>s<=24).length+'h</span>'
+    +'</div>';
+
+  // Sarvashtakavarga visual grid
+  html+='<div class="avg-grid">';
+  sarva.forEach((sc,i)=>{
+    const strong=sc>=30,weak=sc<=24;
+    const pct=Math.round((sc/42)*100);
+    const fc=strong?'#4caf85':weak?'#e06060':'#c9963b';
+    html+='<div class="avg-cell'+(strong?' strong':weak?' weak':'')+'">'
+      +'<div class="avg-house">H'+(i+1)+'</div>'
+      +'<div class="avg-sign">'+SSKT[i]+'</div>'
+      +'<div class="avg-score">'+sc+'</div>'
+      +'<div class="avg-bar"><div class="avg-fill" style="width:'+pct+'%;background:'+fc+'"></div></div>'
+      +'</div>';
   });
-  html+='</div><div style="font-family:\'Cinzel\',serif;font-size:.64rem;color:var(--gold);letter-spacing:.06em;margin-bottom:.4rem">BINNASHTAKAVARGA</div>';
-  PLANET_DEFS.forEach((pl,pi)=>{
-    html+=`<div class="pra-row"><span class="pra-glyph">${pl.g}</span><span class="pra-name">${pl.n}</span><div class="pra-bars">`;
-    bav[pi].forEach(v=>{const bg=v?'rgba(76,175,133,.2)':'rgba(200,80,80,.13)';const tc=v?'#4caf85':'#a05050';html+=`<div class="pra-bar" style="background:${bg};color:${tc}">${v}</div>`});
-    html+=`</div></div>`;
+  html+='</div>';
+
+  // Binnashtakavarga table
+  const pOrder=['Sun','Moon','Mars','Mercury','Jupiter','Venus','Saturn'];
+  const pGlyphs={Sun:'☉',Moon:'☽',Mars:'♂',Mercury:'☿',Jupiter:'♃',Venus:'♀',Saturn:'♄'};
+  html+='<div style="font-family:Cinzel,serif;font-size:.64rem;color:var(--gold);letter-spacing:.06em;margin:.6rem 0 .4rem">BINNASHTAKAVARGA — Per Planet Contribution</div>';
+  pOrder.forEach(pl=>{
+    const row=d.binnashtakavarga[pl];
+    const tot=d.planet_totals[pl];
+    html+='<div class="pra-row"><span class="pra-glyph">'+pGlyphs[pl]+'</span>'
+      +'<span class="pra-name">'+pl+'<small style="color:rgba(201,150,59,.45);margin-left:3px">/'+tot+'</small></span>'
+      +'<div class="pra-bars">';
+    row.forEach(v=>{
+      const bg=v>=5?'rgba(76,175,133,.22)':v<=1?'rgba(200,80,80,.15)':'rgba(201,150,59,.12)';
+      const tc=v>=5?'#4caf85':v<=1?'#a05050':'#c9963b';
+      html+='<div class="pra-bar" style="background:'+bg+';color:'+tc+'">'+v+'</div>';
+    });
+    html+='</div></div>';
   });
   document.getElementById('ashtakGrid').innerHTML=html;
-  const strong=scores.map((s,i)=>s>=28?'H'+(i+1):null).filter(Boolean);
-  const weak=scores.map((s,i)=>s<=24?'H'+(i+1):null).filter(Boolean);
+
+  // House interpretations
   let intHtml='';
-  scores.forEach((sc,i)=>{const col=sc>=28?'rgba(76,200,133,.72)':sc<=24?'rgba(220,100,100,.68)':'var(--gold)';
-    const desc=sc>=28?'Strong — natural blessings':sc<=24?'Weak — apply remedies':'Moderate — timing dependent';
-    intHtml+=`<div style="display:flex;align-items:flex-start;gap:.55rem;padding:.38rem .48rem;border-bottom:1px solid rgba(255,255,255,.04)"><div style="min-width:22px;font-family:'Cinzel',serif;font-size:.66rem;color:${col};padding-top:.06rem">H${i+1}</div><div style="flex:1"><div style="font-size:.76rem;color:var(--iv)">${HOUSE_MEANINGS[i]}</div><div style="font-size:.68rem;color:var(--sw);font-style:italic">${desc}</div></div><div style="font-family:'Space Mono',monospace;font-size:.8rem;color:${col}">${sc}</div></div>`;
+  d.houses.forEach(h=>{
+    const col=h.score>=30?'rgba(76,200,133,.72)':h.score<=24?'rgba(220,100,100,.68)':'var(--gold)';
+    const desc=h.score>=30?'Strong — natural blessings, favourable transits':h.score<=24?'Weak — caution; apply remedies':'Moderate — timing and effort determine results';
+    intHtml+='<div style="display:flex;align-items:flex-start;gap:.55rem;padding:.4rem .5rem;border-bottom:1px solid rgba(255,255,255,.04)">'
+      +'<div style="min-width:24px;font-family:Cinzel,serif;font-size:.68rem;color:'+col+';padding-top:.05rem">H'+h.house+'</div>'
+      +'<div style="flex:1"><div style="font-size:.78rem;color:var(--iv)">'+h.meaning+'</div>'
+      +'<div style="font-size:.7rem;color:var(--sw);font-style:italic">'+desc+'</div></div>'
+      +'<div style="font-family:\'Space Mono\',monospace;font-size:.82rem;color:'+col+'">'+h.score+'</div>'
+      +'</div>';
   });
-  document.getElementById('ashtakInt').innerHTML=intHtml;document.getElementById('ashtakIntCard').style.display='block';
-  genAshtakAI(scores,strong,weak,doSpeak);
+  document.getElementById('ashtakInt').innerHTML=intHtml;
+  document.getElementById('ashtakIntCard').style.display='block';
+
+  // AI narrative reading
+  genAshtakAI(sarva,d.strong_houses,d.weak_houses,doSpeak);
 }
 async function genAshtakAI(scores,strong,weak,doSpeak){
   document.getElementById('ashtakAICard').style.display='block';
