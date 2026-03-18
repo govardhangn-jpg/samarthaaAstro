@@ -808,9 +808,18 @@ function saveSettings(){
   document.getElementById('cfgLbl').textContent=S.name||'Setup';
   closeSettings();toast('✦ Settings saved');
 }
-function testVoice(){
-  const mod=document.getElementById('cfgMod');if(mod)S.model=mod.value;
-  speak('Om Namah Shivaya. I am Samarthaa, your Vedic astrology oracle. The light of the stars flows through me to illuminate your path.');
+async function testVoice(){
+  const mod=document.getElementById('cfgMod');if(mod) S.model=mod.value;
+  toast('Testing voice...');
+  console.log('Voice test — key:',S.elKey?S.elKey.slice(0,12)+'...':'MISSING','voiceId:',S.voiceId,'model:',S.model);
+  if(!S.elKey||S.elKey.length<20){toast('ElevenLabs API key missing — check Settings');return;}
+  if(!S.voiceId){toast('Voice ID missing — check Settings');return;}
+  try{
+    await speak('Namaste. I am Samarthaa, your Vedic oracle. The stars are aligned.');
+  }catch(e){
+    toast('Voice test failed: '+e.message);
+    console.error('Voice test error:',e);
+  }
 }
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('on');setTimeout(()=>t.classList.remove('on'),3000)}
 
@@ -843,45 +852,109 @@ function chunkText(text, maxLen=4800){
 }
 
 async function speakChunk(text){
-  const r=await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${S.voiceId}`,{
-    method:'POST',headers:{'xi-api-key':S.elKey,'Content-Type':'application/json'},
-    body:JSON.stringify({text,model_id:S.model||'eleven_multilingual_v2',voice_settings:{stability:.65,similarity_boost:.82,style:.3,use_speaker_boost:true}})
-  });
-  if(!r.ok){const e=await r.text();console.error('EL error:',e);throw new Error('ElevenLabs error: '+r.status)}
-  return await r.blob();
+  if(!text||!text.trim()) return null;
+  text=text.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim().slice(0,4500);
+  const controller=new AbortController();
+  const tid=setTimeout(()=>controller.abort(),20000);
+  try{
+    // Use non-streaming endpoint — returns complete audio blob
+    const url='https://api.elevenlabs.io/v1/text-to-speech/'+S.voiceId;
+    const r=await fetch(url,{
+      method:'POST',
+      signal:controller.signal,
+      headers:{'xi-api-key':S.elKey,'Content-Type':'application/json'},
+      body:JSON.stringify({
+        text,
+        model_id:S.model||'eleven_multilingual_v2',
+        voice_settings:{stability:.5,similarity_boost:.75,style:.15,use_speaker_boost:false}
+      })
+    });
+    clearTimeout(tid);
+    if(!r.ok){
+      let errDetail='';
+      try{const errJson=await r.json();errDetail=errJson.detail?.message||errJson.detail||'';}catch(e){}
+      const msg='ElevenLabs error '+r.status+(errDetail?' — '+errDetail:'')+(r.status===401?' (invalid API key)':r.status===429?' (rate limit — wait 30s)':r.status===422?' (invalid voice ID)':'');
+      throw new Error(msg);
+    }
+    const blob=await r.blob();
+    if(!blob||blob.size<100) throw new Error('Empty audio response from ElevenLabs');
+    return blob;
+  }catch(e){
+    clearTimeout(tid);
+    if(e.name==='AbortError') throw new Error('Voice request timed out — check internet connection');
+    throw e;
+  }
 }
 
 let speakAbort=false;
 let voiceTriggered=false; // true only when mic or 🔊 button used
+// AudioContext unlock for mobile browsers
+let audioCtx=null;
+function unlockAudio(){
+  if(audioCtx) return;
+  try{audioCtx=new(window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume();}catch(e){}
+}
+
 async function speak(text){
+  if(!text||!text.trim()) return;
+  // Strip any HTML tags that might have leaked in
+  text=text.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
+  if(!text) return;
   if(!S.elKey||!S.voiceId){
-    console.error('Voice not configured - elKey:',!!S.elKey,'voiceId:',!!S.voiceId);
-    toast('Voice not configured — check Setup');return
+    toast('Voice not configured — open Settings to check');
+    console.warn('Voice: elKey=',!!S.elKey,'voiceId=',!!S.voiceId);
+    return;
   }
-  // Always stop & cancel any ongoing speech first
+  // Unlock AudioContext (required for mobile after user gesture)
+  unlockAudio();
+  // Stop any ongoing speech
   speakAbort=true;
-  if(curAudio){curAudio.pause();try{URL.revokeObjectURL(curAudio._url)}catch(e){} curAudio=null}
-  // Small delay to let previous chunk loop exit
-  await new Promise(r=>setTimeout(r,80));
+  if(curAudio){try{curAudio.pause();URL.revokeObjectURL(curAudio._url||'');}catch(e){} curAudio=null;}
+  await new Promise(r=>setTimeout(r,60));
   speakAbort=false;
   setVS('speaking');
   const chunks=chunkText(text);
+  let errorShown=false;
   try{
     for(let i=0;i<chunks.length;i++){
       if(speakAbort) break;
-      const blob=await speakChunk(chunks[i]);
-      if(speakAbort) break;
+      let blob;
+      try{
+        blob=await speakChunk(chunks[i]);
+      }catch(e){
+        if(!errorShown){
+          toast(e.message||'Voice error — check ElevenLabs key');
+          errorShown=true;
+          console.error('speakChunk error:',e);
+        }
+        break;
+      }
+      if(speakAbort||!blob) break;
       const url=URL.createObjectURL(blob);
       await new Promise((resolve,reject)=>{
-        const audio=new Audio(url);
-        curAudio=audio;audio._url=url;
-        audio.onended=()=>{URL.revokeObjectURL(url);resolve()};
-        audio.onerror=(e)=>{URL.revokeObjectURL(url);reject(e)};
-        audio.play().catch(reject);
+        const audio=new Audio();
+        curAudio=audio; audio._url=url;
+        audio.preload='auto';
+        audio.oncanplaythrough=()=>{
+          if(speakAbort){URL.revokeObjectURL(url);resolve();return;}
+          audio.play().catch(e=>{
+            // Autoplay blocked — common on mobile
+            URL.revokeObjectURL(url);
+            toast('Tap screen to enable voice playback');
+            resolve();
+          });
+        };
+        audio.onended=()=>{URL.revokeObjectURL(url);curAudio=null;resolve();};
+        audio.onerror=(e)=>{URL.revokeObjectURL(url);curAudio=null;console.error('Audio error:',e);resolve();}; // resolve not reject so we continue
+        audio.src=url;
+        audio.load();
+        // Safety timeout per chunk
+        setTimeout(()=>{if(curAudio===audio){URL.revokeObjectURL(url);curAudio=null;resolve();}},30000);
       });
     }
-  }catch(e){console.error(e);toast('Voice playback error')}
-  finally{setVS('idle')}
+  }finally{
+    if(!speakAbort) setVS('idle');
+  }
 }
 
 function stopSpeak(){
@@ -898,7 +971,7 @@ if('webkitSpeechRecognition'in window||'SpeechRecognition'in window){
   SR.onerror=()=>{isRec=false;setVS('idle');toast('Voice not recognised — try again')};
   SR.onend=()=>{if(isRec){isRec=false;setVS('idle')}};
 }
-function toggleMic(){
+function toggleMic(){unlockAudio();
   if(!SR){toast('Voice input: use Chrome or Edge');return}
   if(!isRec){voiceTriggered=true;SR.start();isRec=true;setVS('listening')}
   else{SR.stop();isRec=false;setVS('idle')}
@@ -940,13 +1013,14 @@ async function sendMsg(){
       document.getElementById('typing')?.remove();
       // Friendly message for common errors
       if(errMsg.includes('API key')||errMsg.includes('authentication')){
-        addMsg('oracle','The oracle key is missing. Please set ANTHROPIC_API_KEY in Netlify environment variables.');
+        voiceTriggered=false; addMsg('oracle','The oracle key is missing. Please set ANTHROPIC_API_KEY in Netlify environment variables.');
       } else if(errMsg.includes('overloaded')||errMsg.includes('rate')){
-        addMsg('oracle','The stars are momentarily crowded. Please try again in a moment.');
+        voiceTriggered=false; addMsg('oracle','The stars are momentarily crowded. Please try again in a moment.');
       } else {
-        addMsg('oracle','The oracle encountered an issue: '+errMsg+'. Please try again.');
+        voiceTriggered=false; addMsg('oracle','The oracle encountered an issue: '+errMsg+'. Please try again.');
       }
       setVS('idle');
+      voiceTriggered=false;
       return;
     }
     const ans=d.content?.[0]?.text;
