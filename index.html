@@ -1676,7 +1676,7 @@ function renderKundliGrid(chart){
   html+='<div class="si-info">'
     +'<span>Lagna: <strong>'+ascSign+(ascDeg!==null?' '+ascDeg.toFixed(2)+'\u00b0':'')+'</strong></span>'
     +'<span>\u263d '+moonNak+'</span>'
-    +(ayan?'<span style="opacity:.6">Lahiri '+ayan+'\u00b0</span>':'')
+    +(ayan?'<span style="opacity:.6">PL4.5: '+ayan+'\u00b0</span>':'')
     +'</div>';
 
   document.getElementById('kundliOut').innerHTML=html;
@@ -1711,7 +1711,7 @@ function renderPlanetTable(chart){
     </tr>`;
   });
   html+='</tbody></table></div>';
-  html+=`<p style="font-size:.68rem;color:rgba(201,150,59,.5);margin-top:.5rem;font-style:italic">${isNew?'Calculated using Lahiri Ayanamsa · Whole Sign Houses · Swiss Ephemeris':'Approximate positions'}</p>`;
+  html+=`<p style="font-size:.68rem;color:rgba(201,150,59,.5);margin-top:.5rem;font-style:italic">${isNew?'Calculated using Parashara's Light 4.5 Ayanamsa · Whole Sign Houses · Swiss Ephemeris':'Approximate positions'}</p>`;
   document.getElementById('planetOut').innerHTML=html;
   document.getElementById('pcardEl').style.display='block';
 }
