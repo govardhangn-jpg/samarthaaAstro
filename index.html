@@ -1600,7 +1600,7 @@ async function speakKundli(){
   const jupSign=isNew?ch.planets.find(p=>p.name==='Jupiter')?.sign:'unknown';
   const ascDeg=isNew?ch.asc_degree:'';
   const ayan=isNew?ch.ayanamsa:'';
-  await speak(`${S.name||'Your'} Vedic birth chart has ${ascSign} rising as the Lagna${ascDeg?' at '+ascDeg+' degrees':''}. The Moon rests in ${moonSign}, in the ${moonNak} nakshatra, which governs your mind and emotions. The Sun illuminates ${sunSign}, and Jupiter graces ${jupSign}. ${ayan?'The Lahiri ayanamsa used is '+ayan+' degrees.':''}`);
+  await speak(`${S.name||'Your'} Vedic birth chart has ${ascSign} rising as the Lagna${ascDeg?' at '+ascDeg+' degrees':''}. The Moon rests in ${moonSign}, in the ${moonNak} nakshatra, which governs your mind and emotions. The Sun illuminates ${sunSign}, and Jupiter graces ${jupSign}. ${ayan?'The Parasharas Light 4.5 ayanamsa used is '+ayan+' degrees.':''}`);
 }
 function renderKundliGrid(chart){
   const isNew=chart.planets&&chart.planets[0]&&chart.planets[0].name!==undefined;

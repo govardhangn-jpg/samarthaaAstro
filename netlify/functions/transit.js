@@ -9,12 +9,11 @@ function n360(x){return((x%360)+360)%360}
 function solveK(M,e){let E=M;for(let i=0;i<50;i++){const d=(M-E+e*Math.sin(E))/(1-e*Math.cos(E));E+=d;if(Math.abs(d)<1e-10)break}return E}
 function JD(yr,mo,dy,hr){if(mo<=2){yr--;mo+=12}const A=Math.floor(yr/100),B=2-A+Math.floor(A/4);return Math.floor(365.25*(yr+4716))+Math.floor(30.6001*(mo+1))+dy+hr/24+B-1524.5}
 function lahiri(jd){
-  // Parashara's Light 4.5 ayanamsa (Chitrapaksha/Lahiri, Govt of India standard)
-  // Base: 23°51'11.5" at J2000.0 (JD 2451545.5); rate: 50.2910"/year (Newcomb)
-  const BASE=23.853194444; // 23°51'11.5" in decimal degrees
+  // Parasharas Light 4.5 ayanamsa: base 22deg27'37.76" at Jan 1.0 1900; rate 50.2910"/yr
+  const BASE=22.460489;   // 22deg27'37.76" in decimal degrees
+  const JD1900=2415020.5; // Jan 1.0 1900 UT
   const RATE=50.2910/3600; // degrees per Julian year
-  const yearFromJ2000=(jd-2451545.5)/365.25;
-  return BASE+RATE*yearFromJ2000;
+  return BASE+RATE*(jd-JD1900)/365.25;
 }
 function elems(name,T){const e={Mercury:{a:.38709893,e:.20563069-.00002182*T,omega:n360(77.45645+.15940*T),L0:n360(252.25084+149474.07159*T)},Venus:{a:.72333199,e:.00677323-.00004938*T,omega:n360(131.53298+.05638*T),L0:n360(181.97973+58519.21320*T)},Earth:{a:1.00000011,e:.01671022-.00003804*T,omega:n360(102.94719+.31424*T),L0:n360(100.46435+36000.76953*T)},Mars:{a:1.52366231,e:.09341233+.00011902*T,omega:n360(336.04084+.44369*T),L0:n360(355.45332+19140.30268*T)},Jupiter:{a:5.20336301,e:.04839266-.00012880*T,omega:n360(14.75385+.21163*T),L0:n360(34.40438+3034.90270*T)},Saturn:{a:9.53707032,e:.05415060-.00036762*T,omega:n360(92.43194+.61964*T),L0:n360(49.94432+1222.49309*T)}};return e[name]}
 function helioLon(el){const M=n360(el.L0-el.omega)*RAD,E=solveK(M,el.e),nu=2*Math.atan2(Math.sqrt(1+el.e)*Math.sin(E/2),Math.sqrt(1-el.e)*Math.cos(E/2)),r=el.a*(1-el.e*Math.cos(E));return{r,lon:n360(nu*DEG+el.omega)}}
